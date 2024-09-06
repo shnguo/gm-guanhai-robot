@@ -1,0 +1,61 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gm-guanhai-robot
+  namespace: default
+spec:
+  template:
+    metadata:
+      labels:
+        app:  gm-guanhai-robot-api
+      annotations:
+        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/max-scale: "5"
+        autoscaling.knative.dev/target: "20"
+        autoscaling.knative.dev/scale-down-delay: "10m"
+    spec:
+      # nodeSelector:
+      #   "kubernetes.io/hostname": "aigc-ecs-test001.shl.vevor.net"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - Tesla-T4-SHARED
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: "Exists"
+          effect: "PreferNoSchedule"
+      containers:
+        - image: registry.cn-shanghai.aliyuncs.com/vevor_devops/gm-guanhai-robot:latest
+          ports:
+            - containerPort: 8004
+          volumeMounts:
+          - name: config-volume
+            mountPath: /workspace/.env
+            subPath: env-file
+          command: ["/bin/bash"]
+          args: ["-c","uvicorn server:app --host 0.0.0.0 --port 8004"]
+          # args: ["-c","gunicorn fastapi_server:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001"]
+          # resources:
+          #   limits:cd 
+          #     nvidia.com/gpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /health
+            failureThreshold: 5
+            periodSeconds: 60
+          env:
+            - name: VERSION
+              value: "2024-09-06_v1"
+            - name: TZ
+              value: "Asia/Shanghai"
+      volumes:
+        - name: config-volume
+          configMap:
+            # 提供包含要添加到容器中的文件的 ConfigMap 的名称
+            name: env-file

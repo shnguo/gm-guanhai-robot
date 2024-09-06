@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+numpy
+pandas
+python-dotenv
+langchain-core
+langchain-openai
+langchain-community
+prometheus_fastapi_instrumentator
+langchain_milvus
+langgraph
