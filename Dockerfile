@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua
 COPY ./utils /workspace/utils
 COPY ./server.py /workspace/
 
-CMD ["python", "server.py"]
+CMD ["uvicorn", "server:app","--host","0.0.0.0","--port","8004"]

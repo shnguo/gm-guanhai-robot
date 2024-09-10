@@ -29,6 +29,10 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from pprint import pprint
+from pathlib import Path
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 
 load_dotenv(find_dotenv(), override=False, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
@@ -38,7 +42,7 @@ instrumentator = Instrumentator()
 instrumentator.instrument(
     app, metric_namespace="vevor", metric_subsystem="gm_guanhai_robot"
 ).expose(app)
-message_map = {"ai": AIMessage, "human": HumanMessage}
+message_map = {"ai": AIMessage, "human": HumanMessage,'assistant':AIMessage}
 model_map = {
     "gpt4o": AzureChatOpenAI(
         openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
@@ -79,6 +83,13 @@ vector_store = Milvus(
     auto_id=False,
 )
 retriever = vector_store.as_retriever()
+
+# rerank_model = HuggingFaceCrossEncoder(model_name = f"{Path.cwd()}/bge-reranker-v2-m3")
+# compressor = CrossEncoderReranker(model=rerank_model, top_n=3)
+# retriever = ContextualCompressionRetriever(
+#     base_compressor=compressor, base_retriever=retriever
+# )
+
 tool = create_retriever_tool(
     retriever,
     "E-commerce-database-retriever",
