@@ -1,13 +1,13 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: gm-guanhai-robot
+  name: gm-guanhai-vit
   namespace: default
 spec:
   template:
     metadata:
       labels:
-        app:  gm-guanhai-robot-api
+        app:  gm-guanhai-vit-api
       annotations:
         autoscaling.knative.dev/min-scale: "0"
         autoscaling.knative.dev/max-scale: "5"
@@ -31,19 +31,19 @@ spec:
           operator: "Exists"
           effect: "PreferNoSchedule"
       containers:
-        - image: registry.cn-shanghai.aliyuncs.com/vevor_devops/gm-guanhai-robot:latest
+        - image: registry.cn-shanghai.aliyuncs.com/vevor_devops/gm-guanhai-vit:latest
           ports:
-            - containerPort: 8004
+            - containerPort: 8005
           volumeMounts:
           - name: config-volume
             mountPath: /workspace/.env
             subPath: env-file
           command: ["/bin/bash"]
-          args: ["-c","uvicorn server:app --host 0.0.0.0 --port 8004"]
+          args: ["-c","uvicorn bge-vit-server:app --host 0.0.0.0 --port 8005"]
           # args: ["-c","gunicorn fastapi_server:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001"]
-          # resources:
-          #   limits:cd 
-          #     nvidia.com/gpu: "1"
+          resources:
+            limits:
+              nvidia.com/gpu: "2"
           readinessProbe:
             httpGet:
               path: /health
@@ -51,7 +51,7 @@ spec:
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-09-19_v3"
+              value: "2024-09-14_v1"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:

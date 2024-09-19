@@ -38,6 +38,13 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from utils.templates import image_cate_map_template
 from utils.monitoring import STATUS_COUNTER
 from langchain_community.callbacks.manager import get_openai_callback
+from pymilvus import MilvusClient
+
+import re
+
+INLINE_LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+FOOTNOTE_LINK_TEXT_RE = re.compile(r'\[([^\]]+)\]\[(\d+)\]')
+FOOTNOTE_LINK_URL_RE = re.compile(r'\[(\d+)\]:\s+(\S+)')
 
 load_dotenv(find_dotenv(), override=False, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
@@ -47,7 +54,7 @@ instrumentator = Instrumentator()
 instrumentator.instrument(
     app, metric_namespace="vevor", metric_subsystem="gm_guanhai_robot"
 ).expose(app)
-message_map = {"ai": AIMessage, "human": HumanMessage,'assistant':AIMessage}
+message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage}
 model_map = {
     "gpt4o": AzureChatOpenAI(
         openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
@@ -103,6 +110,19 @@ tool = create_retriever_tool(
 tools = [tool]
 
 
+def find_md_links(md):
+    """ Return dict of links in markdown """
+
+    links = dict(INLINE_LINK_RE.findall(md))
+    footnote_links = dict(FOOTNOTE_LINK_TEXT_RE.findall(md))
+    footnote_urls = dict(FOOTNOTE_LINK_URL_RE.findall(md))
+    if footnote_links:
+        for key, value in footnote_links.iteritems():
+            footnote_links[key] = footnote_urls[value]
+        links.update(footnote_links)
+
+    return links
+
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
     start = time.time()
@@ -143,6 +163,7 @@ class ChatCompletionRequest(BaseModel):
 
 
 class Knowledge(BaseModel):
+    pk: str = "-1"
     text: str
     metadata: dict = {}
 
@@ -150,9 +171,16 @@ class Knowledge(BaseModel):
 class KnowledgeRequest(BaseModel):
     knowledge_list: List[Knowledge]
 
+
+class KnowledgeGetRequest(BaseModel):
+    search_text: str
+    limit: int
+
+
 class Product_Image(BaseModel):
     category_name: str
     product_image: str
+
 
 async def _resp_async_generator(text_resp: str):
     # let's pretend every word is a token and return it over time
@@ -184,7 +212,7 @@ async def _resp_async_generator_true(request, resp_content):
             ],
             "choices": [
                 {
-                   "delta": {"content": token + " "},
+                    "delta": {"content": token + " "},
                     "logprobs": None,
                     "finish_reason": "stop",
                 }
@@ -216,6 +244,7 @@ async def chat_completions(request: ChatCompletionRequest):
                             logistics and warehousing management. 
                             If the question is beyond the company's main business scope, please politely refuse to answer.
                             Please refuse to answer politically sensitive questions.
+                            Please Use markdown to include clickable links in the chat
                       """
         )
     ]
@@ -229,6 +258,11 @@ async def chat_completions(request: ChatCompletionRequest):
             _resp_async_generator_true(request, resp_content),
             media_type="application/x-ndjson",
         )
+    content = resp_content["messages"][-1].content
+    links = find_md_links(content)
+    for _key in links:
+        content = content.replace(f'[{_key}]',f'{_key}').replace(f'({links[_key]})','')
+
     return {
         "id": str(time.time()).replace(".", ""),
         "object": "chat.completion",
@@ -241,13 +275,16 @@ async def chat_completions(request: ChatCompletionRequest):
             {
                 "index": 0,
                 "message": Message(
-                    role="assistant", content=resp_content["messages"][-1].content
+                    role="assistant", content=content
                 ),
                 "logprobs": None,
                 "finish_reason": "stop",
             }
         ],
         "usage": resp_content["messages"][-1].usage_metadata,
+        "extra_info":{
+            "links":[{'url_title':k,'url_link':v} for (k,v) in links.items()]
+        }
     }
 
 
@@ -274,24 +311,80 @@ async def knowledge_add(request: KnowledgeRequest):
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}
 
+
+@app.post("/knowledge/get")
+async def knowledge_get(request: KnowledgeGetRequest):
+    client = MilvusClient(
+        uri=os.getenv('MILVUS_URL'),
+        token=f"{os.getenv('MILVUS_USER')}:{os.getenv('MILVUS_PASSWORD')}",
+        db_name="default",
+    )
+    vec = embeddings.embed_query(request.search_text)
+    res = client.search(
+        collection_name="gm_guanhai_robot",  # Replace with the actual name of your collection
+        data=[vec],
+        limit=request.limit,  # Max. number of search results to return
+        search_params={
+            "metric_type": "L2",
+            "params": {
+                "itopk_size": 128,
+                "search_width": 4,
+                "min_iterations": 0,
+                "max_iterations": 0,
+                "team_size": 0,
+            },
+        },  # Search parameters
+        output_fields=["pk",'text','$meta'],  # Output fields to return
+    )
+    result = []
+    for item in res[0]:
+        result.append({
+            'id':item['id'],
+            'distance':item['distance'],
+            'entity':{
+                'text':item['entity'].pop('text'),
+                'pk':item['entity'].pop('pk'),
+                'metadata':item['entity']
+            }
+        })
+
+
+    # result = json.dumps(res, indent=4)
+    # print(result)
+    return {'data':result,"status_code": 200,}
+
+@app.post("/knowledge/update")
+async def knowledge_update(request: KnowledgeRequest):
+    try:
+        vector_store.delete(ids=[i.pk for i in request.knowledge_list])
+        return await knowledge_add(request)
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+    
+
+
+
+
 @app.post("/image_cate_map/generate")
-async def image_cate_map_generate(pi:Product_Image):
-    if  pi.product_image.startswith('data:image/jpeg;base64,') or pi.product_image.startswith('http'):
+async def image_cate_map_generate(pi: Product_Image):
+    if pi.product_image.startswith(
+        "data:image/jpeg;base64,"
+    ) or pi.product_image.startswith("http"):
         image_data = pi.product_image
-        if  pi.product_image.startswith('http'):
+        if pi.product_image.startswith("http"):
             base64str = base64.b64encode(httpx.get(image_data).content).decode("utf-8")
             image_data = f"data:image/jpeg;base64,{base64str}"
         extraction_chain = (
-            image_cate_map_template
-            | model_map['gpt4o'] | StrOutputParser()
+            image_cate_map_template | model_map["gpt4o"] | StrOutputParser()
         )
         try:
             with get_openai_callback() as cb:
                 result = await extraction_chain.ainvoke(
-                {"category_name":pi.category_name,"image_data": image_data}
-            )
-                result = 1 if 'yes' in result.lower() else 0
-                result = {'data':result}
+                    {"category_name": pi.category_name, "image_data": image_data}
+                )
+                result = 1 if "yes" in result.lower() else 0
+                result = {"data": result}
                 result.update(
                     {
                         "total_tokens": cb.total_tokens,
@@ -310,8 +403,9 @@ async def image_cate_map_generate(pi:Product_Image):
 
     else:
         STATUS_COUNTER.labels("5xx").inc()
-        logger.error('Wrong image type')
+        logger.error("Wrong image type")
         return {"error": "Wrong image type", "status_code": 500}
+
 
 @app.get("/health")
 async def health():

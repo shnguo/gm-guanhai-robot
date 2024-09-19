@@ -9,3 +9,10 @@ langchain-community
 prometheus_fastapi_instrumentator
 langchain_milvus
 langgraph
+transformers
+FlagEmbedding
+peft
+ftfy
+regex
+tqdm
+

@@ -163,3 +163,5 @@ cython_debug/
 bge-m3/
 vapor_app-ubuntu/
 
+ViT-B/32/ViT-B-32.pt
+CLIP/
