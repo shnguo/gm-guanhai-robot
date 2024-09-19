@@ -30,10 +30,11 @@ from transformers import ViTImageProcessor, ViTModel
 from PIL import Image
 import requests
 
+
 app = FastAPI(title="gm bge API", docs_url=None, redoc_url=None)
 logger = get_logger(os.path.basename(__file__))
-# bge_model = BGEM3FlagModel(f'{Path.cwd}/bge-m3',  
-#                        use_fp16=True)
+bge_model = BGEM3FlagModel(f'{Path.cwd()}/bge-m3',  
+                       use_fp16=True)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 vit_processor = ViTImageProcessor.from_pretrained(f'{Path.cwd()}/vit-base-patch16-224-in21k')
 vit_model = ViTModel.from_pretrained(f'{Path.cwd()}/vit-base-patch16-224-in21k',device_map=device)
@@ -54,6 +55,10 @@ class ClipBody(BaseModel):
 class ClipRequest(BaseModel):
     ori_product:ClipBody
     target_product_list:list[ClipBody]
+
+class BgeRequest(BaseModel):
+    ori_text: str
+    target_text_list: list[str]
 
 
 @app.middleware("http")
@@ -165,6 +170,19 @@ async def clip_similarity(cr:ClipRequest):
     except Exception as e:
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}
+
+@app.post("/bge_similarity")
+async def bge_similarity(br:BgeRequest):
+    embeddings_1 = bge_model.encode([br.ori_text], 
+                            batch_size=12, 
+                            max_length=8192, # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
+                            )['dense_vecs']
+    embeddings_2 = bge_model.encode(br.target_text_list)['dense_vecs']
+    similarity = embeddings_1 @ embeddings_2.T
+    return {
+        "data":similarity[0].tolist(),
+        "status_code": 200
+    }
 
 
 

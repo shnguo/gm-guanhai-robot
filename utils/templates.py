@@ -24,3 +24,8 @@ image_cate_map_template = ChatPromptTemplate.from_messages(
         ),
     ]
 )
+
+text_cate_map_template = PromptTemplate.from_template('''
+    The following is a product description. Please judge whether this product belongs to {category_name}. Please answer only yes or no.
+    The product description is : {product_text}
+''')

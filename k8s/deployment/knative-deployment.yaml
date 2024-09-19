@@ -51,7 +51,7 @@ spec:
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-09-19_v3"
+              value: "2024-09-19_v4"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:

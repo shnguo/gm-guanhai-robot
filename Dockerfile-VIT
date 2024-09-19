@@ -16,6 +16,7 @@ COPY ./CLIP /workspace/CLIP
 RUN pip install /workspace/CLIP
 COPY ./utils /workspace/utils
 COPY ./bge-vit-server.py /workspace/
+COPY ./bge-m3 /workspace/bge-m3
 
 
 CMD ["uvicorn", "bge-vit-server:app","--host","0.0.0.0","--port","8005"]

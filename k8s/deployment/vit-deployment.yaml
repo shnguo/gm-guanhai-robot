@@ -43,7 +43,7 @@ spec:
           # args: ["-c","gunicorn fastapi_server:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001"]
           resources:
             limits:
-              nvidia.com/gpu: "2"
+              nvidia.com/gpu: "6"
           readinessProbe:
             httpGet:
               path: /health
@@ -51,7 +51,7 @@ spec:
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-09-14_v1"
+              value: "2024-09-19_v1"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:
