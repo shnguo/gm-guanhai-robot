@@ -5,7 +5,7 @@ from fastapi.responses import ORJSONResponse
 import traceback
 from fastapi import Request, Response
 from typing import Deque, List, Optional, Tuple
-
+import numpy as np
 import asyncio
 import json
 import time
@@ -59,6 +59,16 @@ class ClipRequest(BaseModel):
 class BgeRequest(BaseModel):
     ori_text: str
     target_text_list: list[str]
+
+class VitEmbeddingRequest(BaseModel):
+    url_list:list[str]
+
+class ClipEmbeddingRequest(BaseModel):
+    item_list:list[ClipBody]
+
+class BgeEmbeddingRequest(BaseModel):
+    text_list:list[str]
+
 
 
 @app.middleware("http")
@@ -118,23 +128,23 @@ async def image_similarity(ir:ImageRequest):
     return {"data":result.cpu().tolist(),
             "status_code": 200}
 
+# 编码图片的辅助函数
+def encode_image(image_path):
+    image = Image.open(requests.get(image_path, stream=True).raw)
+    image_input = clip_preprocess(image).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_features = clip_model.encode_image(image_input)
+    return image_features
+
+# 编码文本的辅助函数
+def encode_text(text):
+    text_input = clip.tokenize([text]).to(device)
+    with torch.no_grad():
+        text_features = clip_model.encode_text(text_input)
+    return text_features
+
 def compute_product_similarity(image_path1, text1, image_path2, text2):
     # 检查是否有GPU可用
-    
-    # 编码图片的辅助函数
-    def encode_image(image_path):
-        image = Image.open(requests.get(image_path, stream=True).raw)
-        image_input = clip_preprocess(image).unsqueeze(0).to(device)
-        with torch.no_grad():
-            image_features = clip_model.encode_image(image_input)
-        return image_features
-
-    # 编码文本的辅助函数
-    def encode_text(text):
-        text_input = clip.tokenize([text]).to(device)
-        with torch.no_grad():
-            text_features = clip_model.encode_text(text_input)
-        return text_features
 
     # 编码商品1的图片和文本
     image_features1 = encode_image(image_path1)
@@ -184,6 +194,60 @@ async def bge_similarity(br:BgeRequest):
         "status_code": 200
     }
 
+@app.post("/vit_embedding")
+async def vit_embedding(ver:VitEmbeddingRequest):
+    try:
+        target_tensor_list = []
+        for url in ver.url_list:
+            _image_raw = Image.open(requests.get(url, stream=True).raw)
+            _inputs = vit_processor(images=_image_raw, return_tensors="pt")
+            _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
+            _last_hidden_states = _outputs.last_hidden_state
+            _ori_image_tersor = _last_hidden_states.view(1,-1)
+            _ori_image_tersor /= _ori_image_tersor.norm(dim=-1, keepdim=True)
+            # logger.info(_ori_image_tersor.norm(dim=-1, keepdim=True))
+            target_tensor_list.append(_ori_image_tersor)
+        target_tensor = torch.cat(target_tensor_list,dim=0)
+        logger.info(f"vit_embedding_shape={target_tensor.shape}")
+        return {
+            'embeddings':target_tensor.cpu().tolist()
+        }
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+
+@app.post("/clip_embedding")
+async def clip_embedding(cer:ClipEmbeddingRequest):
+    try:
+        target_tensor_list = []
+        for item in cer.item_list:
+            image_features = encode_image(item.image_url)
+            text_features = encode_text(item.text)
+            product_features = torch.cat([image_features, text_features], dim=-1)
+            product_features /= product_features.norm(dim=-1, keepdim=True)
+            target_tensor_list.append(product_features)
+        target_tensor = torch.cat(target_tensor_list,dim=0)
+        logger.info(f"clip_embedding_shape={target_tensor.shape}")
+        return {
+            'embeddings':target_tensor.cpu().tolist()
+        }
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+
+@app.post("/bge_embedding")
+async def bge_embedding(ber:BgeEmbeddingRequest):
+    try:
+        bge_embeddings_tensor = bge_model.encode(ber.text_list,batch_size=12, 
+                            max_length=8192)['dense_vecs']
+        # logger.info(np.linalg.norm(bge_embeddings_tensor[0]))
+        logger.info(f"bge_embedding_shape={bge_embeddings_tensor.shape}")
+        return {
+            'embeddings':bge_embeddings_tensor.tolist()
+        }
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
 
 
 
