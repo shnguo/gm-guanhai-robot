@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 import time
 # sys.path.append('.')
 from utils.log import get_logger
-from routers import health, product_cate_map
+from routers import health, product_cate_map, article_rewrite
 
 load_dotenv(find_dotenv(), override=False, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
@@ -42,6 +42,7 @@ async def db_session_middleware(request: Request, call_next):
 
 app.include_router(health.router)
 app.include_router(product_cate_map.router)
+app.include_router(article_rewrite.router)
 
 
 

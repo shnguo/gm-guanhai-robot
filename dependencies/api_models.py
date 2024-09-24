@@ -7,3 +7,9 @@ class Product_Image(BaseModel):
 class Product_Text(BaseModel):
     category_name: str
     product_text: str
+
+class Article_Title(BaseModel):
+    article_title: str
+
+class Article_Text(BaseModel):
+    article_text: str
