@@ -23,7 +23,7 @@ async def article_title_rewrite(at:Article_Title):
     try:
             with get_openai_callback() as cb:
                 result = await extraction_chain.ainvoke(
-                    {"article_tile": at.article_title}
+                    {"article_title": at.article_title}
                 )
                 #result = 1 if "yes" in result.lower() else 0
                 result = {"data": result}
