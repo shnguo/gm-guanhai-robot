@@ -29,3 +29,9 @@ text_cate_map_template = PromptTemplate.from_template('''
     The following is a product description. Please judge whether this product belongs to {category_name}. Please answer only yes or no.
     The product description is : {product_text}
 ''')
+
+article_title_rewrite_template = PromptTemplate.from_template('''
+    You are a journalist specializing in cross-border trade, finance, and economics. Please rewrite the article title using a more professional, detailed, and engaging description. The output language should be Chinese. 
+    Note that the output should not contain any Chinese terms such as ‘雨果’ or ‘雨果跨境’. Only output the new title.
+    The article title is : {article_title}
+''')
