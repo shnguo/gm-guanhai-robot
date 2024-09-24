@@ -7,12 +7,11 @@ from fastapi import Request, Response
 from dotenv import load_dotenv, find_dotenv
 from fastapi import FastAPI, HTTPException, Request
 import time
+load_dotenv(find_dotenv(), override=True, verbose=True)
+app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
 # sys.path.append('.')
 from utils.log import get_logger
 from routers import health, product_cate_map, article_rewrite
-
-load_dotenv(find_dotenv(), override=False, verbose=True)
-app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
 logger = get_logger(os.path.basename(__file__))
 
 @app.middleware("http")
