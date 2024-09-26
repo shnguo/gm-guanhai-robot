@@ -14,9 +14,11 @@ import hashlib
 import base64
 import httpx
 import torch
+import aiohttp,asyncio
 from torch import  nn 
 import clip
 from typing import Optional, List
+from io import BytesIO
 
 from pydantic import BaseModel, Field
 
@@ -46,6 +48,10 @@ clip_model, clip_preprocess = clip.load(f'{Path.cwd()}/ViT-B/32/ViT-B-32.pt', de
 
 class ImageRequest(BaseModel):
     ori_image: str
+    target_image_list: list[str]
+
+class ImageListRequest(BaseModel):
+    ori_image_list: list[str]
     target_image_list: list[str]
 
 class ClipBody(BaseModel):
@@ -104,33 +110,127 @@ async def health():
 
 @app.post("/image_similarity")
 async def image_similarity(ir:ImageRequest):
-    ori_image_raw = Image.open(requests.get(ir.ori_image, stream=True).raw)
-    inputs = vit_processor(images=ori_image_raw, return_tensors="pt")
-    outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
-    last_hidden_states = outputs.last_hidden_state
-    ori_image_tersor = last_hidden_states.view(1,-1)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(ir.ori_image, timeout=3) as response:
+                content = await response.read()
+                ori_image_raw  = Image.open(BytesIO(content))
+        # ori_image_raw = Image.open(requests.get(ir.ori_image, stream=True, timeout=3).raw)
+        inputs = vit_processor(images=ori_image_raw, return_tensors="pt")
+        with torch.no_grad():
+            outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
+        last_hidden_states = outputs.last_hidden_state
+        ori_image_tersor = last_hidden_states.view(1,-1)
 
-    target_tensor_list = []
-    for url in ir.target_image_list:
-        _image_raw = Image.open(requests.get(url, stream=True).raw)
-        _inputs = vit_processor(images=_image_raw, return_tensors="pt")
-        _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
+        target_tensor_list = []
+        for url in ir.target_image_list:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=3) as response:
+                    content = await response.read()
+                    _image_raw  = Image.open(BytesIO(content))
+            # _image_raw = Image.open(requests.get(url, stream=True, timeout=3).raw)
+            _inputs = vit_processor(images=_image_raw, return_tensors="pt")
+            with torch.no_grad():
+                _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
+            _last_hidden_states = _outputs.last_hidden_state
+            _ori_image_tersor = _last_hidden_states.view(1,-1)
+            # logger.info(_ori_image_tersor.shape)
+            target_tensor_list.append(_ori_image_tersor)
+        target_tensor = torch.cat(target_tensor_list,dim=0)
+        
+        cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        # logger.info(ori_image_tersor.shape)
+        # logger.info(target_tensor.shape)
+        with torch.no_grad():
+            result  = cos(ori_image_tersor,target_tensor)
+        logger.info(result)
+        return {"data":result.cpu().tolist(),
+                "status_code": 200}
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+
+async def get_image_raw(url:str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, timeout=10) as response:
+            content = await response.read()
+            image_raw  = Image.open(BytesIO(content))
+            return image_raw
+
+@app.post("/vit_similarity")
+async def vit_similarity(ir:ImageRequest):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(ir.ori_image, timeout=3) as response:
+                content = await response.read()
+                ori_image_raw  = Image.open(BytesIO(content))
+        # ori_image_raw = Image.open(requests.get(ir.ori_image, stream=True, timeout=3).raw)
+        inputs = vit_processor(images=ori_image_raw, return_tensors="pt")
+        with torch.no_grad():
+            outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
+        last_hidden_states = outputs.last_hidden_state
+        ori_image_tersor = last_hidden_states.view(1,-1)
+        
+
+        tasks_list = [get_image_raw(url) for url in ir.target_image_list]
+        image_raw_list = await asyncio.gather(*tasks_list)
+        _inputs = vit_processor(images=image_raw_list, return_tensors="pt")
+        with torch.no_grad():
+            _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
         _last_hidden_states = _outputs.last_hidden_state
-        _ori_image_tersor = _last_hidden_states.view(1,-1)
-        # logger.info(_ori_image_tersor.shape)
-        target_tensor_list.append(_ori_image_tersor)
-    target_tensor = torch.cat(target_tensor_list,dim=0)
-    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
-    # logger.info(ori_image_tersor.shape)
-    # logger.info(target_tensor.shape)
-    result  = cos(ori_image_tersor,target_tensor)
-    logger.info(result)
-    return {"data":result.cpu().tolist(),
-            "status_code": 200}
+        _ori_image_tersor = _last_hidden_states.view(len(ir.target_image_list),-1)
+        # logger.info(_ori_image_tersor)
+        cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        with torch.no_grad():
+            result  = cos(ori_image_tersor,_ori_image_tersor)
+            logger.info(result)
+            return {"data":result.cpu().tolist(),
+                "status_code": 200}
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+
+@app.post("/vit_mul_similarity")
+async def vit_mul_similarity(ilr:ImageListRequest):
+    try:
+        tasks_list = [get_image_raw(url) for url in ilr.ori_image_list]
+        image_raw_list = await asyncio.gather(*tasks_list)
+        inputs = vit_processor(images=image_raw_list, return_tensors="pt")
+        with torch.no_grad():
+            outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
+        last_hidden_states = outputs.last_hidden_state
+        ori_image_tersor = last_hidden_states.view(len(ilr.ori_image_list),-1)
+
+        
+        tasks_list = [get_image_raw(url) for url in ilr.target_image_list]
+        image_raw_list = await asyncio.gather(*tasks_list)
+        _inputs = vit_processor(images=image_raw_list, return_tensors="pt")
+        with torch.no_grad():
+            _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
+        _last_hidden_states = _outputs.last_hidden_state
+        target_image_tersor = _last_hidden_states.view(len(ilr.target_image_list),-1)
+
+        # cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        # with torch.no_grad():
+        #     result  = cos(ori_image_tersor,target_image_tersor)
+        #     logger.info(result)
+        ori_image_tersor /= ori_image_tersor.norm(dim=-1, keepdim=True)
+        target_image_tersor /= target_image_tersor.norm(dim=-1, keepdim=True)
+        similarity = (ori_image_tersor @ target_image_tersor.T).cpu().tolist()
+        return {"data":similarity,
+                "status_code": 200}
+
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
 
 # 编码图片的辅助函数
-def encode_image(image_path):
-    image = Image.open(requests.get(image_path, stream=True).raw)
+async def encode_image(image_path):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(image_path, timeout=3) as response:
+            content = await response.read()
+            image  = Image.open(BytesIO(content))
+    # image = Image.open(requests.get(image_path, stream=True).raw)
     image_input = clip_preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_features = clip_model.encode_image(image_input)
@@ -143,15 +243,24 @@ def encode_text(text):
         text_features = clip_model.encode_text(text_input)
     return text_features
 
-def compute_product_similarity(image_path1, text1, image_path2, text2):
+async def compute_product_similarity(image_path1, text1, image_path2, text2):
     # 检查是否有GPU可用
 
     # 编码商品1的图片和文本
-    image_features1 = encode_image(image_path1)
+    try:
+        image_features1 = await encode_image(image_path1)
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}
+
     text_features1 = encode_text(text1)
 
     # 编码商品2的图片和文本
-    image_features2 = encode_image(image_path2)
+    try:
+        image_features2 = encode_image(image_path2)
+    except Exception as e:
+        logger.error(str(e))
+        return {"status_code": 500, "message": str(e)}   
     text_features2 = encode_text(text2)
 
     # 将图片和文本特征拼接在一起
@@ -172,7 +281,7 @@ async def clip_similarity(cr:ClipRequest):
     result = []
     try:
         for item in cr.target_product_list:
-            result.append(compute_product_similarity(cr.ori_product.image_url,cr.ori_product.text,item.image_url,item.text))
+            result.append(await compute_product_similarity(cr.ori_product.image_url,cr.ori_product.text,item.image_url,item.text))
         return {
             "data":result,
             "status_code": 200
