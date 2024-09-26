@@ -9,7 +9,9 @@ class Product_Text(BaseModel):
     product_text: str
 
 class Article_Title(BaseModel):
+    article_id: int
     article_title: str
 
 class Article_Text(BaseModel):
+    article_id: int
     article_text: str

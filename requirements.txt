@@ -15,4 +15,5 @@ peft
 ftfy
 regex
 tqdm
+mysql-connector-python
 
