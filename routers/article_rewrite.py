@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 import sys
 # import os
 # import base64
@@ -71,6 +71,7 @@ key_name = "article_id"
 #key_value = 12345  # 示例的文章ID
 title_field_name = "new_title"
 body_field_name = "new_body"
+tag_field_name = "new_tag"
 
 
 # 资讯文章标题改写接口
@@ -165,6 +166,9 @@ async def article_text_tag(at: Article_Text):
                     "status_code": 200,
                 }
             )
+            # 改写后的内容写入or更新到指定数据库表和字段
+            if hasattr(cb, 'total_tokens') and cb.total_tokens is not None:
+                upsert_article_content(table_name, key_name, at.article_id, tag_field_name, result.get("data"))
         STATUS_COUNTER.labels("2xx").inc()
         return result
     except Exception as e:

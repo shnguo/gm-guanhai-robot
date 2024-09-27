@@ -47,7 +47,7 @@ article_text_rewrite_template = PromptTemplate.from_template('''
 
 # 标签清单参考：https://alidocs.dingtalk.com/i/nodes/Amq4vjg89ndMdyQjHLyln5vjW3kdP0wQ
 article_text_tag_template = PromptTemplate.from_template('''
-    Please tag the following article based on its content. The tag list is as follows. Output no more than 3 tags, separated by space, and do not include any additional content. 
+    Please tag the following article based on its content. The tag list is as follows. Output no more than 3 tags, sepereted by '-', and do not include any additional content. 
     Strictly maintain the original form of the tags, do not translate them. Duplicate tags should be removed from the output.
     The tag list is : 亚马逊、ebay、TEMU、TikTok、沃尔玛、家乐福、SHEIN、Shoppe、Lazada、速卖通、美客多、独立站、开店、选品、流量、物流、招商信息、政策法规、美国、加拿大、日韩、东南亚、南美、欧洲、中东、俄罗斯
     The article is : {article_text}
