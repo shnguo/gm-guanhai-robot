@@ -14,6 +14,7 @@ from utils.log import get_logger
 from routers import health, product_cate_map, article_rewrite
 
 
+from routers import health, product_cate_map, article_rewrite, article_rewrite_backgroundtask
 logger = get_logger(os.path.basename(__file__))
 
 @app.middleware("http")
@@ -44,6 +45,9 @@ async def db_session_middleware(request: Request, call_next):
 app.include_router(health.router)
 app.include_router(product_cate_map.router)
 app.include_router(article_rewrite.router)
+
+app.include_router(article_rewrite_backgroundtask.router)
+
 
 
 
