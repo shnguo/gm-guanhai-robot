@@ -67,7 +67,7 @@ body_field_name = "new_body"
 tag_field_name = "new_tag"
 
 
-# 假设有一个函数 upsert_article_content 存储改写后的内容到数据库
+# 存储改写后的title内容到数据库
 def save_rewritten_title(at, result):
     # 改写后的内容写入或更新到指定数据库表和字段
     if "data" in result:
@@ -104,7 +104,7 @@ async def background_rewrite_title(at: Article_Title):
 
 @router.post("/article_title/rewrite_backgroundtask")
 async def article_title_rewrite(at: Article_Title, background_tasks: BackgroundTasks):
-    # 检测 article_title 字符串长度（默认2000）
+    # 检测 article_title 字符串长度（默认最多2000）
     if len(at.article_title) > 2000:
         raise HTTPException(status_code=400, detail="article_title length exceeds 2000 characters.")
 
@@ -114,3 +114,97 @@ async def article_title_rewrite(at: Article_Title, background_tasks: BackgroundT
     # 立即返回响应，后台任务会继续执行
     return {"status": "Rewrite task started in the background"}
 
+
+# 存储改写后的正文body内容到数据库
+def save_rewritten_body(at, result):
+    # 改写后的内容写入或更新到指定数据库表和字段
+    if "data" in result:
+        upsert_article_content(table_name, key_name, at.article_id, body_field_name, result.get("data"))
+    else:
+        logger.error("No data in result to save.")
+
+
+# 正文改写背景任务中执行的函数
+async def background_rewrite_text(at: Article_Text):
+    extraction_chain = article_text_rewrite_template | model_map["gpt4o"] | StrOutputParser()
+    try:
+        with get_openai_callback() as cb:
+            result = await extraction_chain.ainvoke(
+                {"article_text": at.article_text}
+            )
+            result = {"data": result}
+            result.update(
+                {
+                    "total_tokens": cb.total_tokens,
+                    "prompt_tokens": cb.prompt_tokens,
+                    "completion_tokens": cb.completion_tokens,
+                    "total_cost_usd": cb.total_cost,
+                    "status_code": 200,
+                }
+            )
+            # 调用保存函数
+            save_rewritten_body(at, result)
+        STATUS_COUNTER.labels("2xx").inc()
+    except Exception as e:
+        STATUS_COUNTER.labels("5xx").inc()
+        logger.error(e)
+
+
+@router.post("/article_text/rewrite_backgroundtask")
+async def article_text_rewrite(at: Article_Text, background_tasks: BackgroundTasks):
+    # 检测 article_text 字符串长度（默认最多50000）
+    if len(at.article_text) > 50000:
+        raise HTTPException(status_code=400, detail="article_text length exceeds 50000 characters.")
+
+    # 将任务加入到 BackgroundTasks 中，不会阻塞接口响应
+    background_tasks.add_task(background_rewrite_text, at)
+
+    # 立即返回响应，后台任务会继续执行
+    return {"status": "Rewrite task started in the background"}
+
+# 存储改写后的tags内容到数据库
+def save_rewritten_tag(at, result):
+    # 改写后的内容写入或更新到指定数据库表和字段
+    if "data" in result:
+        upsert_article_content(table_name, key_name, at.article_id, tag_field_name, result.get("data"))
+    else:
+        logger.error("No data in result to save.")
+
+
+# tag改写背景任务中执行的函数
+async def background_rewrite_tag(at: Article_Text):
+    extraction_chain = article_text_tag_template | model_map["gpt4o"] | StrOutputParser()
+    try:
+        with get_openai_callback() as cb:
+            result = await extraction_chain.ainvoke(
+                {"article_text": at.article_text}
+            )
+            result = {"data": result}
+            result.update(
+                {
+                    "total_tokens": cb.total_tokens,
+                    "prompt_tokens": cb.prompt_tokens,
+                    "completion_tokens": cb.completion_tokens,
+                    "total_cost_usd": cb.total_cost,
+                    "status_code": 200,
+                }
+            )
+            # 调用保存函数
+            save_rewritten_tag(at, result)
+        STATUS_COUNTER.labels("2xx").inc()
+    except Exception as e:
+        STATUS_COUNTER.labels("5xx").inc()
+        logger.error(e)
+
+
+@router.post("/article_tag/rewrite_backgroundtask")
+async def article_tag_rewrite(at: Article_Text, background_tasks: BackgroundTasks):
+    # 检测 article_text 字符串长度（默认最多50000）
+    if len(at.article_text) > 50000:
+        raise HTTPException(status_code=400, detail="article_text length exceeds 50000 characters.")
+
+    # 将任务加入到 BackgroundTasks 中，不会阻塞接口响应
+    background_tasks.add_task(background_rewrite_tag, at)
+
+    # 立即返回响应，后台任务会继续执行
+    return {"status": "Rewrite task started in the background"}
