@@ -15,3 +15,8 @@ class Article_Title(BaseModel):
 class Article_Text(BaseModel):
     article_id: int
     article_text: str
+
+class Article_Input(BaseModel):
+    article_id: int
+    article_title: str
+    article_content: str
