@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, status
+from fastapi.responses import JSONResponse
 import sys
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.callbacks.manager import get_openai_callback
@@ -12,6 +13,7 @@ from dependencies import model_map
 
 router = APIRouter()
 logger = get_logger(__file__)
+
 
 import mysql.connector
 from mysql.connector import Error
@@ -101,18 +103,51 @@ async def background_rewrite_title(at: Article_Title):
         STATUS_COUNTER.labels("5xx").inc()
         logger.error(e)
 
-
-@router.post("/article_title/rewrite_backgroundtask")
+'''
+1.	返回 202 状态码 (status.HTTP_202_ACCEPTED)：表示请求已被接受用于处理，但处理尚未完成。
+2.	抛出 400 状态码 (status.HTTP_400_BAD_REQUEST)：当 article_title 长度超出限制时，返回 400 错误。
+3.	处理异常返回 500 状态码：如果后台任务添加失败，返回 500 内部服务器错误。
+4.	使用 JSONResponse 明确返回状态，确保响应体符合 JSON 格式。
+'''
+@router.post("/article_title/rewrite_backgroundtask", status_code=status.HTTP_202_ACCEPTED)
 async def article_title_rewrite(at: Article_Title, background_tasks: BackgroundTasks):
     # 检测 article_title 字符串长度（默认最多2000）
     if len(at.article_title) > 2000:
-        raise HTTPException(status_code=400, detail="article_title length exceeds 2000 characters.")
+        STATUS_COUNTER.labels("4xx").inc()
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={
+            "status": "article_title length exceeds 2000 characters",
+            "status_code": status.HTTP_400_BAD_REQUEST
+        })
 
     # 将任务加入到 BackgroundTasks 中，不会阻塞接口响应
-    background_tasks.add_task(background_rewrite_title, at)
+    try:
+        background_tasks.add_task(background_rewrite_title, at)
+    except Exception as e:
+        STATUS_COUNTER.labels("5xx").inc()
+        logger.error(e)
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={
+            "status": f"Background task failed: {str(e)}",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR
+        })
 
     # 立即返回响应，后台任务会继续执行
-    return {"status": "Rewrite task started in the background"}
+    STATUS_COUNTER.labels("2xx").inc()
+    return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content={
+        "status": "Rewrite task started in the background",
+        "status_code": status.HTTP_202_ACCEPTED
+    })
+
+# @router.post("/article_title/rewrite_backgroundtask")
+# async def article_title_rewrite(at: Article_Title, background_tasks: BackgroundTasks):
+#     # 检测 article_title 字符串长度（默认最多2000）
+#     if len(at.article_title) > 2000:
+#         raise HTTPException(status_code=400, detail="article_title length exceeds 2000 characters.")
+#
+#     # 将任务加入到 BackgroundTasks 中，不会阻塞接口响应
+#     background_tasks.add_task(background_rewrite_title, at)
+#
+#     # 立即返回响应，后台任务会继续执行
+#     return {"status": "Rewrite task started in the background"}
 
 
 # 存储改写后的正文body内容到数据库
@@ -197,6 +232,7 @@ async def background_rewrite_tag(at: Article_Text):
         logger.error(e)
 
 
+# 多个tag以 '-' 分隔，具体请以article_text_tag_template中的描述为准
 @router.post("/article_tag/rewrite_backgroundtask")
 async def article_tag_rewrite(at: Article_Text, background_tasks: BackgroundTasks):
     # 检测 article_text 字符串长度（默认最多50000）
