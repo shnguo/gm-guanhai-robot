@@ -11,7 +11,7 @@ load_dotenv(find_dotenv(), override=True, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
 # sys.path.append('.')
 from utils.log import get_logger
-from routers import health, product_cate_map, article_rewrite, article_rewrite_backgroundtask, content_rewrite_background
+from routers import health, product_cate_map, article_rewrite, article_rewrite_backgroundtask, content_rewrite_background,content_fully_rewrite
 logger = get_logger(os.path.basename(__file__))
 
 @app.middleware("http")
@@ -46,6 +46,8 @@ app.include_router(article_rewrite.router)
 app.include_router(article_rewrite_backgroundtask.router)
 
 app.include_router(content_rewrite_background.router)
+
+app.include_router(content_fully_rewrite.router)
 
 
 

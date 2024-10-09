@@ -64,4 +64,16 @@ article_text_tag_template = PromptTemplate.from_template('''
     The article is : {article_text}
 ''')
 
-
+article_full_rewrite_template = PromptTemplate.from_template('''
+      作为一个商业贸易相关的顾问，请用内容翔实的陈述，改写以下文章标题和正文，从而提炼出重点并用易读易懂的方式陈述。
+      同时根据文章内容从标签清单选取合适的标签打标, 注意标签最多不超过3个，多个标签以'-'分割，不要含有重复标签。
+      标签清单：亚马逊、ebay、TEMU、TikTok、沃尔玛、家乐福、SHEIN、Shoppe、Lazada、速卖通、美客多、独立站、开店、选品、流量、物流、招商信息、政策法规、美国、加拿大、日韩、东南亚、南美、欧洲、中东、俄罗斯
+      注意措辞和原文保持一定的差异性。改写后的内容中不要含有‘雨果’ 或 ‘雨果跨境’等词汇。输出的正文要采用HTML格式，并且不要含有标题部分和多余的换行符、特殊字符。
+      文章标题：
+      {article_title}
+      文章正文：
+      {article_text}
+      注意措辞和原文保持一定的差异性。改写后的内容中不要含有‘雨果’ 或 ‘雨果跨境’等词汇。输出的正文要采用HTML格式，并且不要含有标题部分和多余的换行符、特殊字符。
+      输出的标题、正文、标签以JSON格式返回，三个部分分别对应的key是 new_title, new_body, new_tags
+      注意输出内容仅有JSON的文本，不要再包含任何标识符，比如反引号或语言标识符（如json）。
+''')
