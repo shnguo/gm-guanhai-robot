@@ -73,7 +73,8 @@ def upsert_article_content(table_name, key_name, key_value, title, body, tags):
 # 改写并生成标签的异步任务
 async def background_rewrite_and_tag_article(article_id, article_title, article_content):
     # 新的合并模板，包含标题、正文和标签生成
-    extraction_chain = article_full_rewrite_template | model_map["gpt4o"] | StrOutputParser()
+    #extraction_chain = article_full_rewrite_template | model_map["gpt4o"] | StrOutputParser()
+    extraction_chain = article_full_rewrite_template | model_map["gpt-4-turbo-128k"] | StrOutputParser()
     try:
         with get_openai_callback() as cb:
             result = await extraction_chain.ainvoke({
