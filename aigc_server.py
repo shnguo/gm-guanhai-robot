@@ -14,7 +14,7 @@ from utils.log import get_logger
 from routers import health, product_cate_map, article_rewrite
 
 
-from routers import health, product_cate_map, article_rewrite, article_rewrite_backgroundtask
+from routers import health, product_cate_map, article_rewrite, article_rewrite_backgroundtask,publication_rewrite
 logger = get_logger(os.path.basename(__file__))
 
 @app.middleware("http")
@@ -47,6 +47,7 @@ app.include_router(product_cate_map.router)
 app.include_router(article_rewrite.router)
 
 app.include_router(article_rewrite_backgroundtask.router)
+app.include_router(publication_rewrite.router)
 
 
 

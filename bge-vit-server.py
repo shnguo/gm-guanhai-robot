@@ -3,7 +3,8 @@ import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 import traceback
-from fastapi import Request, Response
+from fastapi import Request, Response, BackgroundTasks
+from contextlib import asynccontextmanager
 from typing import Deque, List, Optional, Tuple
 import numpy as np
 import asyncio
@@ -31,9 +32,21 @@ from pathlib import Path
 from transformers import ViTImageProcessor, ViTModel
 from PIL import Image
 import requests
+import redis.asyncio as redis
+import base64
+from io import BytesIO
 
+load_dotenv(find_dotenv(), override=True, verbose=True)
+redis=redis.Redis(host=os.getenv("GUANHAI_REDIS_URL"),port=6379,password=os.getenv("GUANHAI_REDIS_PASSWORD"),decode_responses=True)
 
-app = FastAPI(title="gm bge API", docs_url=None, redoc_url=None)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the ML model
+    # app.state.redis=aioredis.from_url(os.getenv("REDIS_URL"))
+    yield
+    await redis.close()
+
+app = FastAPI(title="gm bge API", docs_url=None, redoc_url=None,lifespan=lifespan)
 logger = get_logger(os.path.basename(__file__))
 bge_model = BGEM3FlagModel(f'{Path.cwd()}/bge-m3',  
                        use_fp16=True)
@@ -150,15 +163,43 @@ async def image_similarity(ir:ImageRequest):
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}
 
-async def get_image_raw(url:str):
+async def set_cache(key,value):
+    # print(value)
+    await redis.set(key, str(value),ex=3600*24)
+
+async def get_cache(key):
+    return await redis.get(key)
+
+
+
+
+async def get_image_raw(url:str,background_tasks: BackgroundTasks):
+    image_str = await get_cache(url)
+    # print(image_str)
+    if image_str:
+        image_str = image_str[2:-1]
+        logger.info(f'{url} cache hit')
+        image_data = base64.b64decode(image_str)
+
+        # Open the image using BytesIO
+        image_raw = Image.open(BytesIO(image_data))
+        return image_raw
+
+
     async with aiohttp.ClientSession() as session:
         async with session.get(url, timeout=10) as response:
             content = await response.read()
             image_raw  = Image.open(BytesIO(content))
+            buffered = BytesIO()
+            image_raw.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue())
+            # print(img_str[2:-1])
+            # await set_cache(url,img_str)
+            background_tasks.add_task(set_cache, url, img_str)
             return image_raw
 
 @app.post("/vit_similarity")
-async def vit_similarity(ir:ImageRequest):
+async def vit_similarity(ir:ImageRequest,background_tasks: BackgroundTasks):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(ir.ori_image, timeout=3) as response:
@@ -172,7 +213,7 @@ async def vit_similarity(ir:ImageRequest):
         ori_image_tersor = last_hidden_states.view(1,-1)
         
 
-        tasks_list = [get_image_raw(url) for url in ir.target_image_list]
+        tasks_list = [get_image_raw(url,background_tasks) for url in ir.target_image_list]
         image_raw_list = await asyncio.gather(*tasks_list)
         _inputs = vit_processor(images=image_raw_list, return_tensors="pt")
         with torch.no_grad():
@@ -191,9 +232,9 @@ async def vit_similarity(ir:ImageRequest):
         return {"status_code": 500, "message": str(e)}
 
 @app.post("/vit_mul_similarity")
-async def vit_mul_similarity(ilr:ImageListRequest):
+async def vit_mul_similarity(ilr:ImageListRequest,background_tasks: BackgroundTasks):
     try:
-        tasks_list = [get_image_raw(url) for url in ilr.ori_image_list]
+        tasks_list = [get_image_raw(url,background_tasks) for url in ilr.ori_image_list]
         image_raw_list = await asyncio.gather(*tasks_list)
         inputs = vit_processor(images=image_raw_list, return_tensors="pt")
         with torch.no_grad():
@@ -202,7 +243,7 @@ async def vit_mul_similarity(ilr:ImageListRequest):
         ori_image_tersor = last_hidden_states.view(len(ilr.ori_image_list),-1)
 
         
-        tasks_list = [get_image_raw(url) for url in ilr.target_image_list]
+        tasks_list = [get_image_raw(url,background_tasks) for url in ilr.target_image_list]
         image_raw_list = await asyncio.gather(*tasks_list)
         _inputs = vit_processor(images=image_raw_list, return_tensors="pt")
         with torch.no_grad():

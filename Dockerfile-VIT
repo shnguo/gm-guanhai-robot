@@ -10,12 +10,14 @@ WORKDIR /workspace
 # COPY ./mbart-large-50-many-to-one-mmt ./mbart-large-50-many-to-one-mmt
 COPY ./vit-base-patch16-224-in21k /workspace/vit-base-patch16-224-in21k
 COPY ./ViT-B /workspace/ViT-B
+COPY ./CLIP /workspace/CLIP
+COPY ./bge-m3 /workspace/bge-m3
 COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-COPY ./CLIP /workspace/CLIP
+
 RUN pip install /workspace/CLIP
 COPY ./utils /workspace/utils
-COPY ./bge-m3 /workspace/bge-m3
+
 COPY ./bge-vit-server.py /workspace/
 
 

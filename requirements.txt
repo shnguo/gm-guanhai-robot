@@ -17,4 +17,5 @@ regex
 tqdm
 rocketmq-client-python
 mysql-connector-python
+redis
 

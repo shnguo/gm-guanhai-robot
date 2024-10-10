@@ -47,11 +47,11 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-            failureThreshold: 5
+            failureThreshold: 20
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-09-26_v3"
+              value: "2024-10-09_v1"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:

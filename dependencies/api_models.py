@@ -15,3 +15,21 @@ class Article_Title(BaseModel):
 class Article_Text(BaseModel):
     article_id: int
     article_text: str
+
+class PublicationRequest(BaseModel):
+    platform:str=''
+    languages:str='English'
+    keyword:str=''
+    productName:str=''
+    productFeatures:str=''
+    excludeKeyword:str=''
+    brand:str=''
+    languageStyle:str=''
+    minLength:int=10
+    maxLength:int=50
+
+
+
+
+
+

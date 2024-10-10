@@ -52,3 +52,51 @@ article_text_tag_template = PromptTemplate.from_template('''
     The tag list is : 亚马逊、ebay、TEMU、TikTok、沃尔玛、家乐福、SHEIN、Shoppe、Lazada、速卖通、美客多、独立站、开店、选品、流量、物流、招商信息、政策法规、美国、加拿大、日韩、东南亚、南美、欧洲、中东、俄罗斯
     The article is : {article_text}
 ''')
+
+
+publication_title_generate_prompt =  PromptTemplate.from_template(template=
+                                                                  """
+Please generate an attractive product title based on the following information. Some information may be missing.
+Product sales platform:{platform}
+Product title language:{languages}
+Product name:{productName}
+Product keywords:{keyword}
+Product features:{productFeatures}
+Words not to appear in product titles:{excludeKeyword}
+Product brand:{brand}
+Title language style:{languageStyle}
+Title length: between {minLength} and {maxLength} words
+                                                                  """)
+
+publication_description_generate_prompt =  PromptTemplate.from_template(template=
+                                                                  """
+Write a compelling marketing copy for "{productName}", highlighting its unique features, benefits, and target audience. 
+In the first paragraph, introduce the product and its standout qualities that set it apart from competitors. 
+In the second paragraph, focus on how the product solves specific problems or enhances the customer’s lifestyle, emphasizing key benefits. 
+In the final paragraph, create a sense of urgency by discussing limited-time offers, customer testimonials, or other incentives, encouraging the reader to take action now.”
+The information you can refer to includes:
+Product sales platforn is {platform}.
+Keywords about the product is :{keyword}
+Product features include: {productFeatures}
+Words should not to appear in marketing copy includes: {excludeKeyword},{platform}
+Product brand is {brand}
+The marketing copy language style should be {languageStyle}
+The marketing copy length should between {minLength} and {maxLength} words.
+Some information may be missing.
+                                                                  """)
+
+publication_5points_generate_prompt =  PromptTemplate.from_template(template=
+                                                                """
+Based on the details provided about "{productName}", create 5 clear and concise selling points.
+Highlight the key features, advantages, and unique aspects that make the product stand out in the market. 
+Focus on how these selling points meet the needs or solve problems for the target audience, ensuring each point is impactful and easy to understand.
+The information you can refer to includes:
+Product sales platforn is {platform}.
+Keywords about the product is :{keyword}
+Product features include: {productFeatures}
+Words should not to appear in marketing copy includes: {excludeKeyword},{platform}
+Product brand is {brand}
+The marketing copy language style should be {languageStyle}
+The marketing copy length should between {minLength} and {maxLength} words.
+Some information may be missing.
+ """)
