@@ -28,7 +28,11 @@ class PublicationRequest(BaseModel):
     minLength:int=10
     maxLength:int=50
 
+class TextExtractionRequest(BaseModel):
+    product_information: str
 
+class ImageExtractionRequest(BaseModel):
+    product_image:str
 
 
 

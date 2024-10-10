@@ -92,11 +92,81 @@ Highlight the key features, advantages, and unique aspects that make the product
 Focus on how these selling points meet the needs or solve problems for the target audience, ensuring each point is impactful and easy to understand.
 The information you can refer to includes:
 Product sales platforn is {platform}.
-Keywords about the product is :{keyword}
+Keywords about the product include: {keyword}
 Product features include: {productFeatures}
 Words should not to appear in marketing copy includes: {excludeKeyword},{platform}
 Product brand is {brand}
 The marketing copy language style should be {languageStyle}
-The marketing copy length should between {minLength} and {maxLength} words.
 Some information may be missing.
  """)
+
+
+product_extraction_template = PromptTemplate.from_template(template=
+    """
+##  Attribute Extraction Challenge: Decode the Description! 🧩
+
+**Your Mission:**  We need your help to decode this product description! Your task is to identify and extract all key product attributes and their corresponding values.
+
+**Product Description:**
+
+{product_information}
+
+**Instructions:**
+
+1. **Identify Key Attributes:** Carefully read the description and pinpoint any words or phrases that describe important product characteristics (e.g., "color", "material", "screen size", "battery life"). These are your **attribute keys**.
+2. **Extract Corresponding Values:** For each identified attribute key, find the specific value(s) associated with it in the description. For example:
+    * Attribute Key: "Color"  ->  Value: "Black, Silver, Rose Gold"
+    * Attribute Key: "Screen Size"  -> Value: "13.3 inches"
+    * Attribute Key: "Battery Life" -> Value: "Up to 10 hours" 
+3. **Handle Variations:**  
+    * **Multiple Values:** Some attributes might have multiple values (like multiple colors). List all values and Separate with commas
+    * **Implicit Values:** Some values might not be stated directly but implied. Use your best judgment to infer these values.
+    * **Missing Values:** If an attribute is not mentioned, you can mark it as "N/A" (Not Applicable).
+
+**Output Format:**
+
+Present your extracted attribute key/value pairs in a clear and organized JSON format, like this:
+
+```json
+{{
+  "Attribute Key 1": "Extracted Value 1",
+  "Attribute Key 2": "Extracted Value 2",
+  "Attribute Key 3": "Extracted Value 3, 4",
+  // ... more attributes as needed
+}}
+```
+
+**Example:**
+
+Let's say the product description includes the phrase "This lightweight phone case is available in a variety of colors, including sleek black and vibrant red."
+
+You would extract the following:
+
+```json
+{{
+  "Feature": "Lightweight",
+  "Product Type": "Phone case",
+  "Color": "Black, Red"
+}}
+```
+
+**Remember:** The goal is to extract as much meaningful attribute information as possible from the product description! 
+
+"""
+)
+
+image_extraction_prompt = ChatPromptTemplate.from_messages(
+    [
+        # ("system", "Try to extract a list of product attributes from the image, including attribute names and attribute values"),
+        ("system", "descirbe the image"),
+        (
+            "user",
+            [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "{image_data}"},
+                }
+            ],
+        ),
+    ]
+)

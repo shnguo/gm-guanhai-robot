@@ -16,3 +16,17 @@ class SellPoint(BaseModel):
 class SellPointList(BaseModel):
     "list of sell points"
     sell_point_list:List[SellPoint]
+
+class Attribute(BaseModel):
+    """Product attribute name and Product attribute value"""
+
+    attribute_name: str = Field(description="Product attribute name")
+    attribute_value: Union[int, str, float,] = Field(
+        description="Product attribute value"
+    )
+
+
+class Attribute_List(BaseModel):
+    """A list containing product attribute names and product attribute values"""
+
+    attribute_list: List[Attribute]
