@@ -15,59 +15,45 @@ router = APIRouter()
 logger = get_logger(__file__)
 
 import json
+import pika
 
-# 数据库插入/更新内容的操作
-import mysql.connector
-from mysql.connector import Error
-
-# 数据库字段配置
-table_name = "new_article"
-key_name = "article_id"
-title_field_name = "new_title"
-body_field_name = "new_body"
-tag_field_name = "new_tags"
+# rabbitMQ参数配置
+rb_host_name = "localhost"
+rb_port = 15672
+rb_username = "admin123"
+rb_password = "admin123"
+rb_queue_name = "article_test"
 
 
-def upsert_article_content(table_name, key_name, key_value, title, body, tags):
-    try:
-        # 连接到MySQL数据库
-        connection = mysql.connector.connect(
-            host='localhost',  # 替换为你的数据库主机名
-            database='mydatabase',  # 替换为你的数据库名
-            user='root',  # 替换为你的数据库用户名
-            password='1987LClc'  # 替换为你的数据库密码
-        )
+# 将改写的内容发送到 RabbitMQ
+def send_to_rabbitmq(article_id, rewritten_data):
+    # 建立与 RabbitMQ 的远程连接
+    #credentials = pika.PlainCredentials('rb_username', 'rb_password')
+    #connection = pika.BlockingConnection(pika.ConnectionParameters('rb_host_name', rb_port, '/', credentials))
 
-        if connection.is_connected():
-            cursor = connection.cursor()
+    # 本地测试
+    connection = pika.BlockingConnection(pika.ConnectionParameters(rb_host_name))
+    channel = connection.channel()
 
-            # 查询该 key 是否存在
-            check_query = f"SELECT COUNT(*) FROM {table_name} WHERE {key_name} = %s"
-            cursor.execute(check_query, (key_value,))
-            result = cursor.fetchone()
+    # 声明队列（如果不存在则创建队列）
+    channel.queue_declare(queue=rb_queue_name, durable=True)
 
-            if result[0] > 0:
-                # 如果 key 存在，则更新记录
-                update_query = f"UPDATE {table_name} SET new_title = %s, new_body = %s, new_tags = %s WHERE {key_name} = %s"
-                cursor.execute(update_query, (title, body, tags, key_value))
-                print(f"Article with {key_name} = {key_value} updated successfully.")
-            else:
-                # 如果 key 不存在，则插入新记录
-                insert_query = f"INSERT INTO {table_name} ({key_name}, new_title, new_body, new_tags) VALUES (%s, %s, %s, %s)"
-                cursor.execute(insert_query, (key_value, title, body, tags))
-                print(f"Article with {key_name} = {key_value} inserted successfully.")
+    # 将改写后的数据转换为 JSON
+    message = json.dumps(rewritten_data, ensure_ascii=False)
 
-            # 提交事务
-            connection.commit()
+    # 将消息发布到队列
+    channel.basic_publish(exchange='',
+                          routing_key=rb_queue_name,
+                          body=message,
+                          properties=pika.BasicProperties(
+                              delivery_mode=2,  # 使消息持久化
+                          )
+                          )
 
-    except Error as e:
-        print(f"Error: {e}")
+    print(f"Article {article_id} rewritten content sent to RabbitMQ")
 
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
-            print("MySQL connection closed.")
+    # 关闭连接
+    connection.close()
 
 
 # 改写并生成标签的异步任务
@@ -83,12 +69,17 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
             })
             #print(result)
             result_js = json.loads(result)
-            #print(result_js)
             result = {
+                "article_id": article_id,
                 "new_title": result_js.get("new_title"),
                 "new_body": result_js.get("new_body"),
                 "new_tags": result_js.get("new_tags")
             }
+
+            # 将文章ID和改写后的标题、正文和标签写入rabbitMQ
+            send_to_rabbitmq(article_id, result)
+
+            # 获取计费信息
             result.update({
                 "total_tokens": cb.total_tokens,
                 "prompt_tokens": cb.prompt_tokens,
@@ -97,8 +88,9 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
                 "status_code": 200,
             })
 
-            # 将改写后的标题、正文和标签保存到数据库
-            upsert_article_content(table_name, key_name, article_id, result["new_title"], result["new_body"], result["new_tags"])
+            # 回调计费接口，统计计费信息
+            # xxxx
+
         STATUS_COUNTER.labels("2xx").inc()
     except Exception as e:
         print(f"Error: {e}")
@@ -114,7 +106,7 @@ status code 定义：
 4.	使用 JSONResponse 明确返回状态，确保响应体符合 JSON 格式。
 '''
 
-# 新的合并接口：改写标题、正文，并生成标签
+# 新的合并接口：一次调用大模型来同时改写标题、正文，+生成标签
 @router.post("/article/fully_rewrite_and_tag_backgroundtask", status_code=status.HTTP_202_ACCEPTED)
 async def rewrite_and_tag_article(article: Article_Input, background_tasks: BackgroundTasks):
     # 检查标题和正文长度是否符合要求

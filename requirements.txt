@@ -16,4 +16,4 @@ ftfy
 regex
 tqdm
 mysql-connector-python
-
+pika

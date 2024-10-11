@@ -15,4 +15,11 @@ model_map = {
         azure_deployment="gpt-4o-mini",
         temperature=0,
     ),
+    "gpt-4-turbo-128k": AzureChatOpenAI(
+        openai_api_key=os.getenv("SWEDEN_AZURE_OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("SWEDEN_AZURE_OPENAI_ENDPOINT"),
+        openai_api_version="2024-03-01-preview",
+        azure_deployment="gpt-4-turbo-128k",
+        temperature=0,
+    ),
 }
