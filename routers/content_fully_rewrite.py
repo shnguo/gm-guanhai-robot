@@ -16,6 +16,7 @@ logger = get_logger(__file__)
 
 import json
 import pika
+import requests
 
 # rabbitMQ参数配置
 rb_host_name = "localhost"
@@ -23,6 +24,21 @@ rb_port = 15672
 rb_username = "admin123"
 rb_password = "admin123"
 rb_queue_name = "article_test"
+
+# 调用大模型后的资费信息落库
+def send_llm_data(data):
+    url = 'https://gateway.vevor.net/ai-works-service/api/workflow-run'  # 计费服务URL
+    headers = {'Content-Type': 'application/json'} # 其它必须的header也记得update
+
+    # 发送 POST 请求
+    response = requests.post(url, json=data, headers=headers)
+
+    # 返回外部请求的响应
+    # return {
+    #     "status_code": response.status_code,
+    #     "response": response.json()
+    # }
+
 
 
 # 将改写的内容发送到 RabbitMQ
@@ -35,7 +51,7 @@ def send_to_rabbitmq(article_id, rewritten_data):
     connection = pika.BlockingConnection(pika.ConnectionParameters(rb_host_name))
     channel = connection.channel()
 
-    # 声明队列（如果不存在则创建队列）
+    # 声明队列（如果不存在则创建队列），且持久化
     channel.queue_declare(queue=rb_queue_name, durable=True)
 
     # 将改写后的数据转换为 JSON
@@ -80,16 +96,17 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
             send_to_rabbitmq(article_id, result)
 
             # 获取计费信息
-            result.update({
+            llm_data = {
+                "article_id": article_id,
                 "total_tokens": cb.total_tokens,
                 "prompt_tokens": cb.prompt_tokens,
                 "completion_tokens": cb.completion_tokens,
                 "total_cost_usd": cb.total_cost,
                 "status_code": 200,
-            })
+            }
 
-            # 回调计费接口，统计计费信息
-            # xxxx
+            # 回调计费接口，落盘计费信息
+            send_llm_data(llm_data)
 
         STATUS_COUNTER.labels("2xx").inc()
     except Exception as e:

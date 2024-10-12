@@ -17,3 +17,4 @@ regex
 tqdm
 mysql-connector-python
 pika
+requests
