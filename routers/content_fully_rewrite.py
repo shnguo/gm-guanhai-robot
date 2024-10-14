@@ -19,16 +19,13 @@ import pika
 import requests
 
 # rabbitMQ参数配置 -- 开发环境公网地址！！
-rb_host_name = "106.14.144.43"
-# rb_host_name = os.getenv("RB_HOST_NAME")
+rb_host_name = os.getenv("RB_HOST_NAME")
 rb_port = 5672
-rb_username = "admin"
-# rb_username = os.getenv("RB_USERNAME")
-rb_password = "admin"
-# rb_password = os.getenv("RB_PASSWORD")
+rb_username = os.getenv("RB_USERNAME")
+rb_password = os.getenv("RB_PASSWORD")
 # 测试用队列：
-rb_queue_name = "article_test"
-# rb_queue_name = os.getenv("RB_ARTICLE_QUEUE")
+# rb_queue_name = "article_test"
+rb_queue_name = os.getenv("RB_ARTICLE_QUEUE")
 
 # 调用大模型后的资费信息落库
 def send_llm_data(data):
