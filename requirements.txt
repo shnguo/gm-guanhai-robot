@@ -20,6 +20,6 @@ mysql-connector-python
 redis
 pika
 requests
-json
+
 
 
