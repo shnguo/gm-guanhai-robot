@@ -28,6 +28,7 @@ rb_password = "admin"
 # rb_password = os.getenv("RB_PASSWORD")
 # 测试用队列：
 rb_queue_name = "article_test"
+# rb_queue_name = os.getenv("RB_ARTICLE_QUEUE")
 
 # 调用大模型后的资费信息落库
 def send_llm_data(data):
