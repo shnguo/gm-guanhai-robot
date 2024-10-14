@@ -16,6 +16,12 @@ class Article_Text(BaseModel):
     article_id: int
     article_text: str
 
+class Article_Input(BaseModel):
+    article_id: int
+    article_title: str
+    article_content: str
+
+
 class PublicationRequest(BaseModel):
     platform:str=''
     languages:str='English'
