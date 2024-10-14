@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
-import sys
+import sys, os
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.callbacks.manager import get_openai_callback
 
@@ -18,11 +18,15 @@ import json
 import pika
 import requests
 
-# rabbitMQ参数配置
-rb_host_name = "localhost"
-rb_port = 15672
-rb_username = "admin123"
-rb_password = "admin123"
+# rabbitMQ参数配置 -- 开发环境公网地址！！
+rb_host_name = "106.14.144.43"
+# rb_host_name = os.getenv("RB_HOST_NAME")
+rb_port = 5672
+rb_username = "admin"
+# rb_username = os.getenv("RB_USERNAME")
+rb_password = "admin"
+# rb_password = os.getenv("RB_PASSWORD")
+# 测试用队列：
 rb_queue_name = "article_test"
 
 # 调用大模型后的资费信息落库
@@ -31,7 +35,7 @@ def send_llm_data(data):
     headers = {'Content-Type': 'application/json'} # 其它必须的header也记得update
 
     # 发送 POST 请求
-    response = requests.post(url, json=data, headers=headers)
+    # response = requests.post(url, json=data, headers=headers)
 
     # 返回外部请求的响应
     # return {
@@ -43,33 +47,38 @@ def send_llm_data(data):
 
 # 将改写的内容发送到 RabbitMQ
 def send_to_rabbitmq(article_id, rewritten_data):
-    # 建立与 RabbitMQ 的远程连接
-    #credentials = pika.PlainCredentials('rb_username', 'rb_password')
-    #connection = pika.BlockingConnection(pika.ConnectionParameters('rb_host_name', rb_port, '/', credentials))
+    try:
+        # 建立与 RabbitMQ 的远程连接
+        credentials = pika.PlainCredentials(rb_username, rb_password)
+        connection = pika.BlockingConnection(pika.ConnectionParameters(rb_host_name, rb_port, '/', credentials))
+        # 本地测试
+        # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
+        # 声明队列（如果不存在则创建队列），且持久化
+        channel.queue_declare(queue=rb_queue_name, durable=True)
+        # 将改写后的数据转换为 JSON
+        message = json.dumps(rewritten_data, ensure_ascii=False)
+        # 将消息发布到队列
+        channel.basic_publish(exchange='',
+                              routing_key=rb_queue_name,
+                              body=message,
+                              properties=pika.BasicProperties(
+                                  delivery_mode=2,  # 使消息持久化
+                              )
+                              )
 
-    # 本地测试
-    connection = pika.BlockingConnection(pika.ConnectionParameters(rb_host_name))
-    channel = connection.channel()
+        print(f"Article {article_id} rewritten content sent to RabbitMQ")
+        # 关闭连接
+        connection.close()
+    except Exception as e:
+        print(f"Error: {e}")
+        STATUS_COUNTER.labels("5xx").inc()
+        logger.error(e)
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={
+            "status": f"Article write to RabbitMQ failed: {str(e)}",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR
+        })
 
-    # 声明队列（如果不存在则创建队列），且持久化
-    channel.queue_declare(queue=rb_queue_name, durable=True)
-
-    # 将改写后的数据转换为 JSON
-    message = json.dumps(rewritten_data, ensure_ascii=False)
-
-    # 将消息发布到队列
-    channel.basic_publish(exchange='',
-                          routing_key=rb_queue_name,
-                          body=message,
-                          properties=pika.BasicProperties(
-                              delivery_mode=2,  # 使消息持久化
-                          )
-                          )
-
-    print(f"Article {article_id} rewritten content sent to RabbitMQ")
-
-    # 关闭连接
-    connection.close()
 
 
 # 改写并生成标签的异步任务
