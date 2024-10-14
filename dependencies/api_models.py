@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-
+from typing import List, Optional, Union
 class Product_Image(BaseModel):
     category_name: str
     product_image: str
@@ -39,6 +39,11 @@ class TextExtractionRequest(BaseModel):
 
 class ImageExtractionRequest(BaseModel):
     product_image:str
+
+class VocRequest(BaseModel):
+    category:str=''
+    asin_list:List[str]
+    voc_history:List[dict]
 
 
 

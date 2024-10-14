@@ -35,23 +35,61 @@ resources:
       #       methods: # HTTP 触发器支持的访问方法，可选值：GET、POST、PUT、DELETE、HEAD
       #         - GET
       #         - POST
-  hello_emoji:
+  gm-guanhai-voc:
     component: fc3 
     props:
       region: ${vars.region}              
-      functionName: "start-python-emoji"
-      description: 'hello world by serverless devs'
+      functionName: "gm-guanhai-voc"
+      description: 'voc function'
       runtime: "python3.10"
       code: ./code
-      handler: index.emoji_handler
-      memorySize: 128
-      timeout: 30
+      handler: index.voc_hander
+      memorySize: 2048
+      timeout: 3600
       environmentVariables:
         LD_LIBRARY_PATH: /code/apt-archives/usr/local/lib:/code/apt-archives/usr/lib:/code/apt-archives/usr/lib/x86_64-linux-gnu:/code/apt-archives/usr/lib64:/code/apt-archives/lib:/code/apt-archives/lib/x86_64-linux-gnu:/code
         PYTHONPATH: /code/python
         PATH: /code/apt-archives/usr/bin:/code/python/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/code:/code/bin:/opt:/opt/bin
+        ALIBABA_CLOUD_ACCESS_KEY_ID: ${env('ALIBABA_CLOUD_ACCESS_KEY_ID')}
+        ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${env('ALIBABA_CLOUD_ACCESS_KEY_SECRET')}
+        VEVORPOC_OPENAI_API_KEY: ${env('VEVORPOC_OPENAI_API_KEY')}
+        VEVORPOC_OPENAI_ENDPOINT: ${env('VEVORPOC_OPENAI_ENDPOINT')}
+      internetAccess: true
       logConfig:
         enableInstanceMetrics: true
         enableRequestMetrics: true
         logBeginRule: DefaultRegex
         logstore: function-log
+        project: aliyun-fc-cn-hangzhou-5574cf0d-4625-5649-89ef-16d86fba7aa0
+      triggers:
+        - triggerName: gm-guanhai-voc-trigger
+          triggerType: eventbridge
+          description: ''
+          qualifier: LATEST
+          triggerConfig:
+            triggerEnable: true
+            asyncInvocationType: false
+            eventSourceConfig:
+              eventSourceType: RabbitMQ
+              eventSourceParameters:
+                sourceRabbitMQParameters:
+                  RegionId: cn-hangzhou
+                  InstanceId: rabbitmq-serverless-cn-g6z3y9kur02
+                  VirtualHostName: aigc
+                  QueueName: aigc-guanhai-voc
+            eventRuleFilterPattern: '{}'
+            eventSinkConfig:
+              deliveryOption:
+                mode: event-streaming
+                eventSchema: RawData
+            runOptions:
+              batchWindow:
+                CountBasedWindow: 1
+                TimeBasedWindow: 0
+              retryStrategy:
+                PushRetryStrategy: EXPONENTIAL_DECAY_RETRY
+                MaximumEventAgeInSeconds: 0
+                MaximumRetryAttempts: 0
+              maximumTasks: 1
+              errorsTolerance: ALL
+              mode: event-streaming

@@ -31,7 +31,7 @@ spec:
           operator: "Exists"
           effect: "PreferNoSchedule"
       containers:
-        - image: registry.cn-shanghai.aliyuncs.com/vevor_devops/gm-guanhai-aigc:latest
+        - image: crpi-67yitwjy0o6k9icc.cn-hangzhou.personal.cr.aliyuncs.com/gm-aigc/gm-guanhai-aigc:latest
           ports:
             - containerPort: 8005
           volumeMounts:
@@ -47,11 +47,11 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-            failureThreshold: 5
+            failureThreshold: 50
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-09-25_v1"
+              value: "2024-10-11_v1"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:

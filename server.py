@@ -214,6 +214,7 @@ async def _resp_async_generator_true(request, resp_content):
                 }
             ],
             "usage": resp_content["messages"][-1].usage_metadata,
+            'status_code':200
         }
         yield f"data: {json.dumps(chunk)}\n\n"
         await asyncio.sleep(0.1)
@@ -246,42 +247,47 @@ async def chat_completions(request: ChatCompletionRequest):
     ]
     for m in request.messages:
         chat_history.append(message_map[m.role](content=m.content))
-    resp_content = agent_executor.invoke({"messages": chat_history})
-    # print(resp_content)
-    # return resp_content
-    if request.stream:
-        return StreamingResponse(
-            _resp_async_generator_true(request, resp_content),
-            media_type="application/x-ndjson",
-        )
-    content = resp_content["messages"][-1].content
-    links = find_md_links(content)
-    for _key in links:
-        content = content.replace(f'[{_key}]',f'{_key}').replace(f'({links[_key]})','')
+    try:
+        resp_content = agent_executor.invoke({"messages": chat_history})
+        # print(resp_content)
+        # return resp_content
+        if request.stream:
+            return StreamingResponse(
+                _resp_async_generator_true(request, resp_content),
+                media_type="application/x-ndjson",
+            )
+        content = resp_content["messages"][-1].content
+        links = find_md_links(content)
+        for _key in links:
+            content = content.replace(f'[{_key}]',f'{_key}').replace(f'({links[_key]})','')
 
-    return {
-        "id": str(time.time()).replace(".", ""),
-        "object": "chat.completion",
-        "created": time.time(),
-        "model": request.model,
-        "system_fingerprint": resp_content["messages"][-1].response_metadata[
-            "system_fingerprint"
-        ],
-        "choices": [
-            {
-                "index": 0,
-                "message": Message(
-                    role="assistant", content=content
-                ),
-                "logprobs": None,
-                "finish_reason": "stop",
-            }
-        ],
-        "usage": resp_content["messages"][-1].usage_metadata,
-        "extra_info":{
-            "links":[{'url_title':k,'url_link':v} for (k,v) in links.items()]
+        return {
+            "id": str(time.time()).replace(".", ""),
+            "object": "chat.completion",
+            "created": time.time(),
+            "model": request.model,
+            "system_fingerprint": resp_content["messages"][-1].response_metadata[
+                "system_fingerprint"
+            ],
+            "choices": [
+                {
+                    "index": 0,
+                    "message": Message(
+                        role="assistant", content=content
+                    ),
+                    "logprobs": None,
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": resp_content["messages"][-1].usage_metadata,
+            "extra_info":{
+                "links":[{'url_title':k,'url_link':v} for (k,v) in links.items()]
+            },
+            'status_code':200
         }
-    }
+    except Exception as e:
+        logger.error(e)
+        return {'status_code':500,'message':str(e)}
 
 
 @app.post("/knowledge/add")

@@ -1,1 +1,8 @@
-emoji==2.0.0
+pyodps
+pandas
+numpy
+tiktoken
+langchain
+langchain_openai
+pydantic-core
+langchain_community

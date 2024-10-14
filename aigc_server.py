@@ -21,6 +21,7 @@ from routers import (
     publication_rewrite,
     attribute_extract,
     content_fully_rewrite,
+    voc
 )
 
 logger = get_logger(os.path.basename(__file__))
@@ -58,6 +59,7 @@ app.include_router(product_cate_map.router)
 app.include_router(publication_rewrite.router)
 app.include_router(attribute_extract.router)
 app.include_router(content_fully_rewrite.router)
+app.include_router(voc.router)
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ spec:
           operator: "Exists"
           effect: "PreferNoSchedule"
       containers:
-        - image: registry.cn-shanghai.aliyuncs.com/vevor_devops/gm-guanhai-vit:latest
+        - image: crpi-67yitwjy0o6k9icc.cn-hangzhou.personal.cr.aliyuncs.com/gm-aigc/gm-guanhai-vit:latest
           ports:
             - containerPort: 8005
           volumeMounts:
