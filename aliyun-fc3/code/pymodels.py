@@ -17,3 +17,6 @@ class Optimization_List(BaseModel):
     """Extracted data about product improvement points"""
 
     optimization_list: List[Optimization_Point]
+
+
+
