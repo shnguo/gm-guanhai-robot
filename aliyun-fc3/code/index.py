@@ -176,6 +176,7 @@ def voc_hander(event, context):
     
         print( {
             "data": {
+                "request_id":request_body['request_id'],
                 "voc_list": [
                     {
                         "voc_key": k,

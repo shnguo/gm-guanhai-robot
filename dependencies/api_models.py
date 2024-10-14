@@ -41,9 +41,10 @@ class ImageExtractionRequest(BaseModel):
     product_image:str
 
 class VocRequest(BaseModel):
+    request_id:str
     category:str=''
     asin_list:List[str]
-    voc_history:List[dict]
+    voc_history:List[dict]=[]
 
 
 
