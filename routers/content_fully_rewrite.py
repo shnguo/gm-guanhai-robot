@@ -29,17 +29,37 @@ rb_queue_name = os.getenv("RB_ARTICLE_QUEUE")
 
 # 调用大模型后的资费信息落库
 def send_llm_data(data):
-    url = 'https://gateway.vevor.net/ai-works-service/api/workflow-run'  # 计费服务URL
-    headers = {'Content-Type': 'application/json'} # 其它必须的header也记得update
+    # 请求的URL
+    url = 'http://gram-gateway-dev.gram-tech.com/ai-works-service/api/workflow-run'
 
+    # 请求头
+    headers = {
+        'app-name': 'articleRewriteWorkflow',
+        'access-key': os.getenv("LLM_DATA_API_ACCESS_KEY"),
+        'secret-key': os.getenv("LLM_DATA_API_SECRET_KEY"),
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Host': 'gram-gateway-dev.gram-tech.com',
+        'Connection': 'keep-alive'
+    }
+
+    # 请求body
+    data = {
+        "parameters": data
+    }
     # 发送 POST 请求
-    # response = requests.post(url, json=data, headers=headers)
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        # 检查请求是否成功
+        if response.json().get("code") == 200:
+            print("大模型调用资费信息落库 - 请求成功:", response.json())
+            STATUS_COUNTER.labels("2xx").inc()
+        else:
+            print(f"大模型调用资费信息落库 - 请求失败: 响应内容: {response.text}")
 
-    # 返回外部请求的响应
-    # return {
-    #     "status_code": response.status_code,
-    #     "response": response.json()
-    # }
+    except requests.exceptions.RequestException as e:
+        print("大模型调用资费信息落库 - 请求出错:", e)
+        logger.error(e)
 
 
 
@@ -104,12 +124,9 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
 
             # 获取计费信息
             llm_data = {
-                "article_id": article_id,
-                "total_tokens": cb.total_tokens,
-                "prompt_tokens": cb.prompt_tokens,
-                "completion_tokens": cb.completion_tokens,
-                "total_cost_usd": cb.total_cost,
-                "status_code": 200,
+                "promptTokens": cb.prompt_tokens,
+                "completionTokens": cb.completion_tokens,
+                "totalTokens": cb.total_tokens
             }
 
             # 回调计费接口，落盘计费信息
