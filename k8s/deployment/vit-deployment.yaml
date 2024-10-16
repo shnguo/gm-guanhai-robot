@@ -9,10 +9,10 @@ spec:
       labels:
         app:  gm-guanhai-vit-api
       annotations:
-        autoscaling.knative.dev/min-scale: "1"
+        autoscaling.knative.dev/min-scale: "0"
         autoscaling.knative.dev/max-scale: "5"
         autoscaling.knative.dev/target: "20"
-        # autoscaling.knative.dev/scale-down-delay: "10m"
+        autoscaling.knative.dev/scale-down-delay: "10m"
     spec:
       # nodeSelector:
       #   "kubernetes.io/hostname": "aigc-ecs-test001.shl.vevor.net"
