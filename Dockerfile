@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64  pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel
+FROM --platform=linux/amd64  registry.cn-shanghai.aliyuncs.com/shnguo/pytorch.pytorch:2.4.0-cuda12.4-cudnn9-devel
 RUN apt update \
     && DEBIAN_FRONTEND=noninteractive apt install -y tzdata \
     && rm -rf /var/lib/apt/lists/*
