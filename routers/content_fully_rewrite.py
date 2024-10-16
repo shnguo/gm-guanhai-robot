@@ -35,8 +35,8 @@ def send_llm_data(data):
     # 请求头
     headers = {
         'app-name': 'articleRewriteWorkflow',
-        'access-key': os.getenv("LLM_DATA_API_ACCESS_KEY"),
-        'secret-key': os.getenv("LLM_DATA_API_SECRET_KEY"),
+        'access-key': os.getenv("LLM_DATA_ARTICLE_ACCESS_KEY"),
+        'secret-key': os.getenv("LLM_DATA_ARTICLE_SECRET_KEY"),
         'Content-Type': 'application/json',
         'Accept': '*/*',
         'Host': 'gram-gateway-dev.gram-tech.com',
