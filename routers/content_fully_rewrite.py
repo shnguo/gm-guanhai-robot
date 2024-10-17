@@ -141,14 +141,14 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
 '''
 - 合并的接口：改写标题、正文，并生成标签
 status code 定义：
-1.	返回 202 状态码 (status.HTTP_202_ACCEPTED)：表示请求已被接受用于处理，但处理尚未完成。
+1.	返回 200 状态码 (status.HTTP_200_OK)：表示请求已被成功接受。
 2.	抛出 400 状态码 (status.HTTP_400_BAD_REQUEST)：当 输入文本(标题/正文等) 长度超出限制时，返回 400 错误。
 3.	处理异常返回 500 状态码：如果后台任务添加失败，返回 500 内部服务器错误。
 4.	使用 JSONResponse 明确返回状态，确保响应体符合 JSON 格式。
 '''
 
 # 新的合并接口：一次调用大模型来同时改写标题、正文，+生成标签
-@router.post("/article/fully_rewrite_and_tag_backgroundtask", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/article/fully_rewrite_and_tag_backgroundtask", status_code=status.HTTP_200_OK)
 async def rewrite_and_tag_article(article: Article_Input, background_tasks: BackgroundTasks):
     # 检查标题和正文长度是否符合要求
     if len(article.article_title) > 2000:
@@ -179,7 +179,7 @@ async def rewrite_and_tag_article(article: Article_Input, background_tasks: Back
 
     # 立即返回响应，后台任务继续执行
     STATUS_COUNTER.labels("2xx").inc()
-    return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content={
+    return JSONResponse(status_code=status.HTTP_200_OK, content={
         "status": "Rewrite and tag tasks started in the background",
-        "status_code": status.HTTP_202_ACCEPTED
+        "status_code": status.HTTP_200_OK
     })
