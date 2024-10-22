@@ -196,3 +196,6 @@ image_extraction_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+market_assessment_generate_prompt = PromptTemplate.from_template('''
+      xxx
+''')
