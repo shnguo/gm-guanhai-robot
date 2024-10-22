@@ -25,16 +25,13 @@ async def market_assessment_generate(ma: MarketAssessment):
     chains = market_assessment_generate_prompt | model_map["gpt4o"] | StrOutputParser()
     try:
         with get_openai_callback() as cb:
+            # input = {key: value for key, value in vars(ma).items() }
+            # print("input values -----> ",input)
             result = await chains.ainvoke(
-                {key: value for key, value in vars(ma).items() }
+                {key: value for key, value in vars(ma).items()}
             )
+            # print("大模型返回：", result)
 
-            # result = await chains.ainvoke(
-            #     {
-            #         "platform": ma.platform,
-            #     }
-            # )
-            # print(result)
             result_js = json.loads(result)
             result = {
                 "优势": result_js.get("优势"),
@@ -51,6 +48,7 @@ async def market_assessment_generate(ma: MarketAssessment):
                 }
             )
             STATUS_COUNTER.labels("2xx").inc()
+            #print(result)
             return result
     except Exception as e:
         print(f"Error: {e}")
