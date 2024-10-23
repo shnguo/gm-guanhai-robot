@@ -25,7 +25,7 @@ from routers import (
     business_advisor
 )
 
-logger = get_logger(os.path.basename(__file__))
+logger = get_logger('gm-guanhai-aigc')
 
 
 @app.middleware("http")

@@ -1,6 +1,6 @@
 import logging
 import os
-
+from loguru import logger
 
 class CustomFormatter(logging.Formatter):
     """ Custom Formatter does these 2 things:
@@ -16,7 +16,7 @@ class CustomFormatter(logging.Formatter):
         return super(CustomFormatter, self).format(record)
 
 
-def get_logger(log_file_name, log_sub_dir=""):
+def get_logger_old(log_file_name, log_sub_dir=""):
     """ Creates a Log File and returns Logger object """
     log_file_name = log_file_name.split('.')[0]
     windows_log_dir = 'c:\\logs_dir\\'
@@ -48,3 +48,8 @@ def get_logger(log_file_name, log_sub_dir=""):
     logger.addHandler(ch)
     # Return logger object
     return logger
+
+def get_logger(log_file_name):
+    logger.add(f'/tmp/{log_file_name}.log',rotation="10 MB", level="ERROR")
+    return logger
+

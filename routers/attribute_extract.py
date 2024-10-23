@@ -17,7 +17,7 @@ from dependencies.api_models import TextExtractionRequest, ImageExtractionReques
 from dependencies.templates import product_extraction_template, image_extraction_prompt
 
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 
 @router.post("/text_extraction")

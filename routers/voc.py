@@ -10,7 +10,7 @@ from utils.log import get_logger
 from dependencies.api_models import VocRequest
 
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 
 

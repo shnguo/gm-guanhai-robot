@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     await redis.close()
 
 app = FastAPI(title="gm bge API", docs_url=None, redoc_url=None,lifespan=lifespan)
-logger = get_logger(os.path.basename(__file__))
+logger = get_logger("gm-guanhai-vit")
 bge_model = BGEM3FlagModel(f'{Path.cwd()}/bge-m3',  
                        use_fp16=True)
 device = "cuda" if torch.cuda.is_available() else "cpu"

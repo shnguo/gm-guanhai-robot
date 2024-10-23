@@ -14,7 +14,7 @@ from dependencies.api_models import Product_Image,Product_Text
 from dependencies.templates import image_cate_map_template, text_cate_map_template
 from dependencies import model_map
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 @router.post("/image_cate_map/generate")
 async def image_cate_map_generate(pi: Product_Image):

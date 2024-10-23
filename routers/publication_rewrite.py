@@ -16,7 +16,7 @@ from dependencies.response_models import ProductTitle,MarketingCopy,SellPointLis
 from dependencies.api_models import PublicationRequest
 
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 
 @router.post("/publication_title/generate")

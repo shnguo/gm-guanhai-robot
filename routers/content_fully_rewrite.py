@@ -12,7 +12,7 @@ from dependencies.templates import article_full_rewrite_template
 from dependencies import model_map
 
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 import json
 import pika

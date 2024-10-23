@@ -48,7 +48,7 @@ FOOTNOTE_LINK_URL_RE = re.compile(r'\[(\d+)\]:\s+(\S+)')
 
 load_dotenv(find_dotenv(), override=False, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
-logger = get_logger(os.path.basename(__file__))
+logger = get_logger("gm-guanhai-robot")
 instrumentator = Instrumentator()
 # instrumentator.add(http_requested_status_total())
 instrumentator.instrument(

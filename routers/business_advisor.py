@@ -17,7 +17,7 @@ from dependencies.api_models import MarketAssessment
 import json
 
 router = APIRouter()
-logger = get_logger(__file__)
+logger = get_logger('gm-guanhai-aigc')
 
 
 @router.post("/business_advisor/market_assessment")
