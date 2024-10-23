@@ -67,6 +67,17 @@ class MarketAssessment(BaseModel):
     service_reviews_proportion:str=''
     biggest_3_months_sales_share:str=''
 
+class ProductAssessment(BaseModel):
+    product_name:str
+    platform_name:str=''
+    sales_region:str=''
+    market_name:str=''
+    sales_share:str=''
+    mom_sales_growth_rate:str=''
+    new_product_sales_share:str=''
+    new_product_mom_sales_growth_rate:str=''
+    product_sales_efficiency:str=''
+
 
 
 
