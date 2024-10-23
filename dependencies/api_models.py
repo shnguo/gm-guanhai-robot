@@ -46,6 +46,37 @@ class VocRequest(BaseModel):
     asin_list:List[str]
     voc_history:List[dict]=[]
 
+class MarketAssessment(BaseModel):
+    market_name:str
+    platform_name:str=''
+    sales_region:str=''
+    category_name:str=''
+    sales_rank:str=''
+    mom_sales_growth_rate:str=''
+    new_product_sales_share:str=''
+    new_product_mom_sales_growth_rate:str=''
+    new_product_avg_review_score:str=''
+    new_product_proportion:str=''
+    new_brand_proportion:str=''
+    new_brand_sales_share:str=''
+    top10_sellers_sales_share:str=''
+    top3_brands_sales_share:str=''
+    made_in_china_product_proportion:str=''
+    key_reviews:str=''
+    quality_reviews_proportion:str=''
+    service_reviews_proportion:str=''
+    biggest_3_months_sales_share:str=''
+
+
+
+
+
+
+
+
+
+
+
 
 
 
