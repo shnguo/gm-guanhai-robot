@@ -201,11 +201,12 @@ async def get_image_raw(url:str,background_tasks: BackgroundTasks):
 @app.post("/vit_similarity")
 async def vit_similarity(ir:ImageRequest,background_tasks: BackgroundTasks):
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(ir.ori_image, timeout=3) as response:
-                content = await response.read()
-                ori_image_raw  = Image.open(BytesIO(content))
-        # ori_image_raw = Image.open(requests.get(ir.ori_image, stream=True, timeout=3).raw)
+        # async with aiohttp.ClientSession() as session:
+        #     async with session.get(ir.ori_image, timeout=3) as response:
+        #         content = await response.read()
+        #         ori_image_raw  = Image.open(BytesIO(content))
+        # # ori_image_raw = Image.open(requests.get(ir.ori_image, stream=True, timeout=3).raw)
+        ori_image_raw = await get_image_raw(ir.ori_image,background_tasks)
         inputs = vit_processor(images=ori_image_raw, return_tensors="pt")
         with torch.no_grad():
             outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})

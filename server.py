@@ -78,6 +78,22 @@ embeddings = AzureOpenAIEmbeddings(
     api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
     openai_api_version="2024-03-01-preview",
 )
+# vector_store = Milvus(
+#     embedding_function=embeddings,
+#     connection_args={
+#         "uri": os.getenv("MILVUS_URL"),
+#         "user": os.getenv("MILVUS_USER"),
+#         "password": os.getenv("MILVUS_PASSWORD"),
+#     },
+#     index_params={
+#         "metric_type": "L2",
+#         "index_type": "GPU_CAGRA",
+#         "params": {"intermediate_graph_degree": 64, "graph_degree": 32},
+#     },
+#     collection_name="gm_guanhai_robot",
+#     enable_dynamic_field=True,
+#     auto_id=False,
+# )
 vector_store = Milvus(
     embedding_function=embeddings,
     connection_args={
@@ -87,10 +103,10 @@ vector_store = Milvus(
     },
     index_params={
         "metric_type": "L2",
-        "index_type": "GPU_CAGRA",
-        "params": {"intermediate_graph_degree": 64, "graph_degree": 32},
+        "index_type": "HNSW",
+        "params": {"M": 64, "efConstruction": 512},
     },
-    collection_name="gm_guanhai_robot",
+    collection_name="gm_guanhai_robot_online",
     enable_dynamic_field=True,
     auto_id=False,
 )
@@ -323,18 +339,21 @@ async def knowledge_get(request: KnowledgeGetRequest):
     )
     vec = embeddings.embed_query(request.search_text)
     res = client.search(
-        collection_name="gm_guanhai_robot",  # Replace with the actual name of your collection
+        collection_name="gm_guanhai_robot_online",  # Replace with the actual name of your collection
         data=[vec],
         limit=request.limit,  # Max. number of search results to return
+        # search_params={
+        #     "metric_type": "L2",
+        #     "params": {
+        #         "itopk_size": 128,
+        #         "search_width": 4,
+        #         "min_iterations": 0,
+        #         "max_iterations": 0,
+        #         "team_size": 0,
+        #     },
         search_params={
             "metric_type": "L2",
-            "params": {
-                "itopk_size": 128,
-                "search_width": 4,
-                "min_iterations": 0,
-                "max_iterations": 0,
-                "team_size": 0,
-            },
+            "params": {"ef": 10}
         },  # Search parameters
         output_fields=["pk",'text','$meta'],  # Output fields to return
     )

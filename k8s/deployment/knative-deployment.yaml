@@ -9,7 +9,7 @@ spec:
       labels:
         app:  gm-guanhai-robot-api
       annotations:
-        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/min-scale: "1"
         autoscaling.knative.dev/max-scale: "5"
         autoscaling.knative.dev/target: "20"
         autoscaling.knative.dev/scale-down-delay: "10m"
@@ -51,7 +51,7 @@ spec:
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-10-22_v3"
+              value: "2024-10-23_v4"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:
