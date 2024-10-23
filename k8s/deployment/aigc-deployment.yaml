@@ -31,7 +31,7 @@ spec:
           operator: "Exists"
           effect: "PreferNoSchedule"
       containers:
-        - image: crpi-67yitwjy0o6k9icc.cn-hangzhou.personal.cr.aliyuncs.com/gm-aigc/gm-guanhai-aigc:latest
+        - image: gm-guanhai-registry.cn-shanghai.cr.aliyuncs.com/gm-aigc/gm-guanhai-aigc:latest
           ports:
             - containerPort: 8005
           volumeMounts:
@@ -51,7 +51,7 @@ spec:
             periodSeconds: 60
           env:
             - name: VERSION
-              value: "2024-10-16_v1"
+              value: "2024-10-22_v1"
             - name: TZ
               value: "Asia/Shanghai"
       volumes:

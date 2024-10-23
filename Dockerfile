@@ -11,6 +11,7 @@ WORKDIR /workspace
 COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 COPY ./utils /workspace/utils
+COPY ./dependencies /workspace/dependencies
 COPY ./server.py /workspace/
 
 CMD ["uvicorn", "server:app","--host","0.0.0.0","--port","8004"]

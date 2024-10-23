@@ -266,12 +266,12 @@ async def vit_mul_similarity(ilr:ImageListRequest,background_tasks: BackgroundTa
         return {"status_code": 500, "message": str(e)}
 
 # 编码图片的辅助函数
-async def encode_image(image_path):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(image_path, timeout=3) as response:
-            content = await response.read()
-            image  = Image.open(BytesIO(content))
-    # image = Image.open(requests.get(image_path, stream=True).raw)
+async def encode_image(image_path,background_tasks):
+    # async with aiohttp.ClientSession() as session:
+    #     async with session.get(image_path, timeout=3) as response:
+    #         content = await response.read()
+    #         image  = Image.open(BytesIO(content))
+    image = await get_image_raw(image_path,background_tasks)
     image_input = clip_preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_features = clip_model.encode_image(image_input)
@@ -284,12 +284,12 @@ def encode_text(text):
         text_features = clip_model.encode_text(text_input)
     return text_features
 
-async def compute_product_similarity(image_path1, text1, image_path2, text2):
+async def compute_product_similarity(image_path1, text1, image_path2, text2,background_tasks: BackgroundTasks):
     # 检查是否有GPU可用
 
     # 编码商品1的图片和文本
     try:
-        image_features1 = await encode_image(image_path1)
+        image_features1 = await encode_image(image_path1,background_tasks)
     except Exception as e:
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}
@@ -298,7 +298,7 @@ async def compute_product_similarity(image_path1, text1, image_path2, text2):
 
     # 编码商品2的图片和文本
     try:
-        image_features2 = encode_image(image_path2)
+        image_features2 = await encode_image(image_path2,background_tasks)
     except Exception as e:
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}   
@@ -318,11 +318,11 @@ async def compute_product_similarity(image_path1, text1, image_path2, text2):
     return similarity
 
 @app.post("/clip_similarity")
-async def clip_similarity(cr:ClipRequest):
+async def clip_similarity(cr:ClipRequest,background_tasks: BackgroundTasks):
     result = []
     try:
         for item in cr.target_product_list:
-            result.append(await compute_product_similarity(cr.ori_product.image_url,cr.ori_product.text,item.image_url,item.text))
+            result.append(await compute_product_similarity(cr.ori_product.image_url,cr.ori_product.text,item.image_url,item.text,background_tasks))
         return {
             "data":result,
             "status_code": 200
@@ -337,7 +337,8 @@ async def bge_similarity(br:BgeRequest):
                             batch_size=12, 
                             max_length=8192, # If you don't need such a long length, you can set a smaller value to speed up the encoding process.
                             )['dense_vecs']
-    embeddings_2 = bge_model.encode(br.target_text_list)['dense_vecs']
+    embeddings_2 = bge_model.encode(br.target_text_list,batch_size=12, 
+                            max_length=8192,)['dense_vecs']
     similarity = embeddings_1 @ embeddings_2.T
     return {
         "data":similarity[0].tolist(),

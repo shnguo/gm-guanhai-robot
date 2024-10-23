@@ -8,7 +8,7 @@ name: hello-world-app
 access: "default"
 
 vars: # 全局变量
-  region: "cn-hangzhou"
+  region: "cn-shanghai"
 
 resources:
   # hello_world:
@@ -60,36 +60,36 @@ resources:
         enableRequestMetrics: true
         logBeginRule: DefaultRegex
         logstore: function-log
-        project: aliyun-fc-cn-hangzhou-5574cf0d-4625-5649-89ef-16d86fba7aa0
-      triggers:
-        - triggerName: gm-guanhai-voc-trigger
-          triggerType: eventbridge
-          description: ''
-          qualifier: LATEST
-          triggerConfig:
-            triggerEnable: true
-            asyncInvocationType: false
-            eventSourceConfig:
-              eventSourceType: RabbitMQ
-              eventSourceParameters:
-                sourceRabbitMQParameters:
-                  RegionId: cn-hangzhou
-                  InstanceId: rabbitmq-serverless-cn-g6z3y9kur02
-                  VirtualHostName: aigc
-                  QueueName: aigc-guanhai-voc
-            eventRuleFilterPattern: '{}'
-            eventSinkConfig:
-              deliveryOption:
-                mode: event-streaming
-                eventSchema: RawData
-            runOptions:
-              batchWindow:
-                CountBasedWindow: 1
-                TimeBasedWindow: 0
-              retryStrategy:
-                PushRetryStrategy: EXPONENTIAL_DECAY_RETRY
-                MaximumEventAgeInSeconds: 0
-                MaximumRetryAttempts: 0
-              maximumTasks: 1
-              errorsTolerance: ALL
-              mode: event-streaming
+        project: aliyun-fc-cn-shanghai-5574cf0d-4625-5649-89ef-16d86fba7aa0
+      # triggers:
+      #   - triggerName: gm-guanhai-voc-trigger
+      #     triggerType: eventbridge
+      #     description: ''
+      #     qualifier: LATEST
+      #     triggerConfig:
+      #       triggerEnable: true
+      #       asyncInvocationType: false
+      #       eventSourceConfig:
+      #         eventSourceType: RabbitMQ
+      #         eventSourceParameters:
+      #           sourceRabbitMQParameters:
+      #             RegionId: cn-hangzhou
+      #             InstanceId: rabbitmq-serverless-cn-g6z3y9kur02
+      #             VirtualHostName: aigc
+      #             QueueName: aigc-guanhai-voc
+      #       eventRuleFilterPattern: '{}'
+      #       eventSinkConfig:
+      #         deliveryOption:
+      #           mode: event-streaming
+      #           eventSchema: RawData
+      #       runOptions:
+      #         batchWindow:
+      #           CountBasedWindow: 1
+      #           TimeBasedWindow: 0
+      #         retryStrategy:
+      #           PushRetryStrategy: EXPONENTIAL_DECAY_RETRY
+      #           MaximumEventAgeInSeconds: 0
+      #           MaximumRetryAttempts: 0
+      #         maximumTasks: 1
+      #         errorsTolerance: ALL
+      #         mode: event-streaming
