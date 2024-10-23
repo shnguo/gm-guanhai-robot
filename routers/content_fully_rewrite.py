@@ -31,7 +31,6 @@ rb_queue_name = os.getenv("RB_ARTICLE_QUEUE")
 # 调用大模型后的资费信息落库
 def send_llm_data(data):
     # 请求的URL
-    #url = 'http://gram-gateway-dev.gram-tech.com/ai-works-service/api/workflow-run'
     url = os.getenv("LLM_DATA_ARTICLE_SAVE_URL")
 
     # 请求头
