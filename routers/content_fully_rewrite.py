@@ -86,7 +86,7 @@ def send_to_rabbitmq(article_id, rewritten_data):
                               )
                               )
 
-        print(f"Article {article_id} rewritten content sent to RabbitMQ")
+        print(f"Article {article_id} rewritten content sent to RabbitMQ: queue {rb_queue_name} on the host {rb_host_name}")
         # 关闭连接
         connection.close()
     except Exception as e:
@@ -94,7 +94,7 @@ def send_to_rabbitmq(article_id, rewritten_data):
         STATUS_COUNTER.labels("5xx").inc()
         logger.error(e)
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={
-            "status": f"Article write to RabbitMQ failed: {str(e)}",
+            "status": f"Article write to RabbitMQ failed! queue {rb_queue_name} host {rb_host_name}: {str(e)}",
             "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR
         })
 
@@ -119,7 +119,7 @@ async def background_rewrite_and_tag_article(article_id, article_title, article_
                 "new_body": result_js.get("new_body"),
                 "new_tags": result_js.get("new_tags")
             }
-
+            #print("改写后的内容 -----> ",result)
             # 将文章ID和改写后的标题、正文和标签写入rabbitMQ
             send_to_rabbitmq(article_id, result)
 
