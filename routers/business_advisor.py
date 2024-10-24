@@ -22,7 +22,7 @@ logger = get_logger('gm-guanhai-aigc')
 
 @router.post("/business_advisor/market_assessment")
 async def market_assessment_generate(ma: MarketAssessment):
-    chains = market_assessment_generate_prompt | model_map["gpt4o"] | StrOutputParser()
+    chains = market_assessment_generate_prompt | model_map["gpt4omini"] | StrOutputParser()
     try:
         with get_openai_callback() as cb:
             # input = {key: value for key, value in vars(ma).items() }
@@ -58,7 +58,7 @@ async def market_assessment_generate(ma: MarketAssessment):
 
 @router.post("/business_advisor/product_assessment")
 async def product_assessment_generate(pa: ProductAssessment):
-    chains = product_assessment_generate_prompt | model_map["gpt4o"] | StrOutputParser()
+    chains = product_assessment_generate_prompt | model_map["gpt4omini"] | StrOutputParser()
     try:
         with get_openai_callback() as cb:
             result = await chains.ainvoke(
