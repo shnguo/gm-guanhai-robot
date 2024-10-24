@@ -43,12 +43,13 @@ text_cate_map_template = PromptTemplate.from_template('''
 
 # 标签清单参考：https://alidocs.dingtalk.com/i/nodes/Amq4vjg89ndMdyQjHLyln5vjW3kdP0wQ
 article_full_rewrite_template = PromptTemplate.from_template('''
-      作为一个商业贸易相关的顾问，请改写以下文章标题和正文，既要重点突出，也要内容详实不过于抽象，最后用第一视角给出易读易懂的陈述。
+      作为一个商业贸易相关的顾问，请改写以下文章标题和正文，既要重点突出，也要内容详实，最后用第一视角给出易读易懂的陈述。
       文章标题：
       {article_title}
       文章正文：
       {article_text}
-      注意输出内容和原文保持50%以上的差异度，使用以下方式进行修改：
+      注意输出内容和原文保持30%以上的差异度，改写后的文章长度不要少于原文长度的一半。
+      具体改写可使用以下方式：
       1、措辞替换：更换用词和短语，使其更加严谨和简练；
       2、句式调整：改变句子结构或语法形式；
       3、信息重组：调整信息的顺序，使用不同的逻辑组织段落，相近或关联的信息进行合并；
