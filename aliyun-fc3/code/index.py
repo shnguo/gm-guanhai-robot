@@ -4,11 +4,12 @@ import logging
 import datetime
 from odps import ODPS
 import os
-from templates import voc_template, voc_summary_template, commentcls_template
+from templates import voc_template, voc_summary_template, commentcls_template,voc_classification_template
 from langchain_core.output_parsers import StrOutputParser
 from langchain_community.callbacks.manager import get_openai_callback
 import tiktoken
-from pymodels import Optimization_List
+from pymodels import Optimization_List,Classification_Result
+from loguru import logger
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv(), override=True, verbose=True)
@@ -63,7 +64,7 @@ def phrase_similarity(text, text_list):
 
 def voc_hander(event, context):
     try:
-        logger = logging.getLogger()
+        # logger = logging.getLogger()
         request_body = eval(event.decode("utf-8").replace("false", "False"))[0]["body"]
         logger.info(request_body)
         # logger.info(f"ALIBABA_CLOUD_ACCESS_KEY_ID={os.getenv('ALIBABA_CLOUD_ACCESS_KEY_ID')}")
@@ -108,7 +109,9 @@ def voc_hander(event, context):
             )
             start = end
 
-        product_chain = voc_template | llm.with_structured_output(schema=Optimization_List)
+        product_chain = voc_template | llm.with_structured_output(
+            schema=Optimization_List
+        )
         with get_openai_callback() as cb:
             p_list = product_chain.batch(context_list)
             total_tokens += cb.total_tokens
@@ -118,10 +121,14 @@ def voc_hander(event, context):
         voc_list = []
         if request_body["voc_history"]:
             for item in request_body["voc_history"]:
-                voc_list.append(f"- **{item['voc_key']}**: {item['voc_value']}")
+                voc_list.append(
+                    f" - **{item['voc_key']}**: {item['voc_value']}. Number of positive reviews: {item['number_of_positive_reviews']}. Number of negative reviews: {item['number_of_negative_reviews']}."
+                )
         for item in p_list:
             for opt in item.optimization_list:
-                voc_list.append(f"- **{opt.optimization_point}**: {opt.description}")
+                voc_list.append(
+                    f" - **{opt.optimization_point}**: {opt.description}. Number of positive reviews: {opt.number_of_positive_reviews}. Number of negative reviews: {opt.number_of_negative_reviews}."
+                )
         summary_chain = voc_summary_template | llm.with_structured_output(
             schema=Optimization_List
         )
@@ -130,6 +137,53 @@ def voc_hander(event, context):
             total_tokens += cb.total_tokens
             prompt_tokens += cb.prompt_tokens
             completion_tokens += cb.completion_tokens
+
+        voc_cls_input = [
+            {
+                "voc_key": p.optimization_point,
+                "voc_category_list": str(
+                    [
+                        "Product quality",
+                        "Product design and function",
+                        "Logistics timeliness",
+                        "Service quality",
+                    ]
+                ),
+            }
+            for p in p_list_2.optimization_list
+        ]
+        voc_cls_chain = voc_classification_template | llm.with_structured_output(
+            schema=Classification_Result
+        )
+        with get_openai_callback() as cb:
+            cls_result_list = voc_cls_chain.batch(voc_cls_input)
+            total_tokens += cb.total_tokens
+            prompt_tokens += cb.prompt_tokens
+            completion_tokens += cb.completion_tokens
+        voc_mapping = dict(zip([p.optimization_point for  p in p_list_2.optimization_list],[c.target for c in cls_result_list]))
+
+        logger.info(
+            {
+                "data": {
+                    "request_id": request_body["request_id"],
+                    "voc_list": [
+                        {
+                            "voc_key": item.optimization_point,
+                            "voc_value": item.description,
+                            "voc_classification":voc_mapping[item.optimization_point],
+                            "number_of_positive_reviews": item.number_of_positive_reviews,
+                            "number_of_negative_reviews": item.number_of_negative_reviews,
+                        }
+                        for item in p_list_2.optimization_list
+                    ],
+                },
+                "status_code": 200,
+                "total_tokens": total_tokens,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            }
+        )
+        return 0
 
         final_p_list = dict(
             [
@@ -153,7 +207,9 @@ def voc_hander(event, context):
                 "The comment attitude, must be chosen from (positive,negative)"
             )
 
-        attitude_chain = commentcls_template | llm.with_structured_output(schema=CommentCls)
+        attitude_chain = commentcls_template | llm.with_structured_output(
+            schema=CommentCls
+        )
         attitude_context_list = [
             {"reviews": _re, "optimization_point_str": ",".join(p_key_list)}
             for _re in df["content"][:]
@@ -173,26 +229,26 @@ def voc_hander(event, context):
             fix_attitude = phrase_similarity(atd.attitude, ["positive", "negative"])
             final_p_list[fix_key][fix_attitude] += 1
 
-    
-        print( {
-            "data": {
-                "request_id":request_body['request_id'],
-                "voc_list": [
-                    {
-                        "voc_key": k,
-                        "voc_value": v["description"],
-                        "positive": v["positive"],
-                        "negative": v["negative"],
-                    } for (k, v) in final_p_list.items()
-                ]
-                
-            },
-            'status_code':200,
-            "total_tokens" :total_tokens,
-            "prompt_tokens" :prompt_tokens,
-            "completion_tokens" :completion_tokens
-
-        })
+        print(
+            {
+                "data": {
+                    "request_id": request_body["request_id"],
+                    "voc_list": [
+                        {
+                            "voc_key": k,
+                            "voc_value": v["description"],
+                            "positive": v["positive"],
+                            "negative": v["negative"],
+                        }
+                        for (k, v) in final_p_list.items()
+                    ],
+                },
+                "status_code": 200,
+                "total_tokens": total_tokens,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+            }
+        )
     except Exception as e:
         logger.error(str(e))
 
@@ -201,12 +257,15 @@ if __name__ == "__main__":
     bbb = [
         {
             "body": {
+                "request_id": "123",
                 "category": "product",
                 "asin_list": ["asin1", "asin2", "asin3"],
                 "voc_history": [
                     {
                         "voc_key": "Product Quality Control",
                         "voc_value": "Several reviews mentioned issues with product quality, such as broken or misaligned parts, rusting, and poor finishing. Implementing stricter quality control measures during manufacturing and packaging can help ensure that products meet the expected standards before they reach customers.",
+                        "number_of_positive_reviews": 100,
+                        "number_of_negative_reviews": 100,
                     }
                 ],
             }

@@ -39,6 +39,8 @@ from dependencies.templates import image_cate_map_template,text_cate_map_templat
 from utils.monitoring import STATUS_COUNTER
 from langchain_community.callbacks.manager import get_openai_callback
 from pymilvus import MilvusClient
+from pprint import pformat
+from rich.pretty import pretty_repr
 
 import re
 
@@ -246,18 +248,18 @@ async def chat_completions(request: ChatCompletionRequest):
         llm,
         tools,
     )
+    "If the question is beyond the company's main business scope, please politely refuse to answer."
     chat_history = [
         SystemMessage(
             content="""
-                            You work for an e-commerce company called Guanmiao Technology. 
-                            The company's main business is to help customers open stores on various e-commerce platforms, 
-                            such as Amazon, eBay, Temu, Tiktok, and AliExpress. 
-                            Your responsibility is to answer questions raised by customers, 
-                            including how to open a store, as well as extended questions related to e-commerce such as product marketing, 
-                            logistics and warehousing management. 
-                            If the question is beyond the company's main business scope, please politely refuse to answer.
-                            Please refuse to answer politically sensitive questions.
-                            Please Use markdown to include clickable links in the chat
+You work for an e-commerce company called Guanmiao Technology. 
+The company's main business is to help customers open stores on various e-commerce platforms, 
+such as Amazon, eBay, Temu, Tiktok, and AliExpress. 
+Your responsibility is to answer questions raised by customers, 
+including how to open a store, as well as extended questions related to e-commerce such as product marketing, 
+logistics and warehousing management. 
+Please refuse to answer politically sensitive questions.
+Please Use markdown to include clickable links in the chat
                       """
         )
     ]
@@ -272,6 +274,9 @@ async def chat_completions(request: ChatCompletionRequest):
                 _resp_async_generator_true(request, resp_content),
                 media_type="application/x-ndjson",
             )
+        # logger.info(pformat(resp_content))
+        logger.info(pretty_repr(resp_content))
+
         content = resp_content["messages"][-1].content
         links = find_md_links(content)
         for _key in links:
