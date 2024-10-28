@@ -8,7 +8,7 @@ ENV TZ=Asia/Shanghai
 WORKDIR /workspace
 
 # COPY ./mbart-large-50-many-to-one-mmt ./mbart-large-50-many-to-one-mmt
-COPY ./vit-base-patch16-224-in21k /workspace/vit-base-patch16-224-in21k
+COPY ./vit-large-patch16-224-in21k /workspace/vit-large-patch16-224-in21k
 COPY ./ViT-B /workspace/ViT-B
 COPY ./CLIP /workspace/CLIP
 COPY ./bge-m3 /workspace/bge-m3

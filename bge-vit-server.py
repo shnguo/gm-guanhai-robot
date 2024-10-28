@@ -51,8 +51,8 @@ logger = get_logger("gm-guanhai-vit")
 bge_model = BGEM3FlagModel(f'{Path.cwd()}/bge-m3',  
                        use_fp16=True)
 device = "cuda" if torch.cuda.is_available() else "cpu"
-vit_processor = ViTImageProcessor.from_pretrained(f'{Path.cwd()}/vit-base-patch16-224-in21k')
-vit_model = ViTModel.from_pretrained(f'{Path.cwd()}/vit-base-patch16-224-in21k',device_map=device)
+vit_processor = ViTImageProcessor.from_pretrained(f'{Path.cwd()}/vit-large-patch16-224-in21k')
+vit_model = ViTModel.from_pretrained(f'{Path.cwd()}/vit-large-patch16-224-in21k',device_map=device)
 
     
 # 加载CLIP模型
@@ -211,6 +211,9 @@ async def vit_similarity(ir:ImageRequest,background_tasks: BackgroundTasks):
         with torch.no_grad():
             outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
         last_hidden_states = outputs.last_hidden_state
+        logger.info(f"last_hidden_states.shape={last_hidden_states.shape}")
+        last_hidden_states = last_hidden_states[:, 0, :].squeeze(1)
+        logger.info(f"last_hidden_states.shape={last_hidden_states.shape}")
         ori_image_tersor = last_hidden_states.view(1,-1)
         
 
@@ -220,6 +223,7 @@ async def vit_similarity(ir:ImageRequest,background_tasks: BackgroundTasks):
         with torch.no_grad():
             _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
         _last_hidden_states = _outputs.last_hidden_state
+        _last_hidden_states = _last_hidden_states[:, 0, :].squeeze(1)
         _ori_image_tersor = _last_hidden_states.view(len(ir.target_image_list),-1)
         # logger.info(_ori_image_tersor)
         cos = nn.CosineSimilarity(dim=1, eps=1e-6)
@@ -241,6 +245,7 @@ async def vit_mul_similarity(ilr:ImageListRequest,background_tasks: BackgroundTa
         with torch.no_grad():
             outputs = vit_model(**{k:v.to(device=device) for (k,v) in inputs.items()})
         last_hidden_states = outputs.last_hidden_state
+        last_hidden_states = last_hidden_states[:, 0, :].squeeze(1)
         ori_image_tersor = last_hidden_states.view(len(ilr.ori_image_list),-1)
 
         
@@ -250,6 +255,7 @@ async def vit_mul_similarity(ilr:ImageListRequest,background_tasks: BackgroundTa
         with torch.no_grad():
             _outputs = vit_model(**{k:v.to(device=device) for (k,v) in _inputs.items()})
         _last_hidden_states = _outputs.last_hidden_state
+        _last_hidden_states = _last_hidden_states[:, 0, :].squeeze(1)
         target_image_tersor = _last_hidden_states.view(len(ilr.target_image_list),-1)
 
         # cos = nn.CosineSimilarity(dim=1, eps=1e-6)

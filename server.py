@@ -35,7 +35,7 @@ from pathlib import Path
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
-from dependencies.templates import image_cate_map_template,text_cate_map_template
+from dependencies.templates import image_cate_map_template, text_cate_map_template
 from utils.monitoring import STATUS_COUNTER
 from langchain_community.callbacks.manager import get_openai_callback
 from pymilvus import MilvusClient
@@ -44,9 +44,9 @@ from rich.pretty import pretty_repr
 
 import re
 
-INLINE_LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
-FOOTNOTE_LINK_TEXT_RE = re.compile(r'\[([^\]]+)\]\[(\d+)\]')
-FOOTNOTE_LINK_URL_RE = re.compile(r'\[(\d+)\]:\s+(\S+)')
+INLINE_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+FOOTNOTE_LINK_TEXT_RE = re.compile(r"\[([^\]]+)\]\[(\d+)\]")
+FOOTNOTE_LINK_URL_RE = re.compile(r"\[(\d+)\]:\s+(\S+)")
 
 load_dotenv(find_dotenv(), override=False, verbose=True)
 app = FastAPI(title="gm guanhai API", docs_url=None, redoc_url=None)
@@ -56,7 +56,7 @@ instrumentator = Instrumentator()
 instrumentator.instrument(
     app, metric_namespace="vevor", metric_subsystem="gm_guanhai_robot"
 ).expose(app)
-message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage}
+message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage,'user':HumanMessage}
 model_map = {
     "gpt4o": AzureChatOpenAI(
         openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
@@ -70,6 +70,13 @@ model_map = {
         azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
         openai_api_version="2024-03-01-preview",
         azure_deployment="gpt-4o-mini",
+        temperature=0,
+    ),
+    "gpt-4o": AzureChatOpenAI(
+        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
+        openai_api_version="2024-03-01-preview",
+        azure_deployment="gpt-4o",
         temperature=0,
     ),
 }
@@ -129,7 +136,7 @@ tools = [tool]
 
 
 def find_md_links(md):
-    """ Return dict of links in markdown """
+    """Return dict of links in markdown"""
 
     links = dict(INLINE_LINK_RE.findall(md))
     footnote_links = dict(FOOTNOTE_LINK_TEXT_RE.findall(md))
@@ -140,6 +147,7 @@ def find_md_links(md):
         links.update(footnote_links)
 
     return links
+
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
@@ -195,7 +203,6 @@ class KnowledgeGetRequest(BaseModel):
     limit: int
 
 
-
 async def _resp_async_generator(text_resp: str):
     # let's pretend every word is a token and return it over time
     tokens = text_resp.split(" ")
@@ -228,15 +235,29 @@ async def _resp_async_generator_true(request, resp_content):
                 {
                     "delta": {"content": token + " "},
                     "logprobs": None,
-                    "finish_reason": "stop",
+                    "finish_reason": "null",
                 }
             ],
             "usage": resp_content["messages"][-1].usage_metadata,
-            'status_code':200
+            "status_code": 200,
         }
-        yield f"data: {json.dumps(chunk)}\n\n"
+        # yield chunk
+        yield f"{json.dumps(chunk)}\n\n"
         await asyncio.sleep(0.1)
-    yield "data: [DONE]\n\n"
+    last_chunk = {
+        "id": "chatcmpl-123",
+        "object": "chat.completion.chunk",
+        "created": time.time(),
+        "model": "gpt-4o",
+        "system_fingerprint": resp_content["messages"][-1].response_metadata[
+                "system_fingerprint"
+            ],
+        "choices": [
+            {"index": 0, "delta": {}, "logprobs": None, "finish_reason": "stop"}
+        ],
+    }
+    yield f"{json.dumps(last_chunk)}\n\n"
+    # yield "data: [DONE]\n\n"
 
 
 @app.post("/chat/completions")
@@ -252,14 +273,14 @@ async def chat_completions(request: ChatCompletionRequest):
     chat_history = [
         SystemMessage(
             content="""
-You work for an e-commerce company called Guanmiao Technology. 
-The company's main business is to help customers open stores on various e-commerce platforms, 
-such as Amazon, eBay, Temu, Tiktok, and AliExpress. 
-Your responsibility is to answer questions raised by customers, 
-including how to open a store, as well as extended questions related to e-commerce such as product marketing, 
-logistics and warehousing management. 
-Please refuse to answer politically sensitive questions.
-Please Use markdown to include clickable links in the chat
+你在一家名为观妙科技的电商公司工作。
+该公司的主要业务是帮助客户在各种电商平台上开店，
+例如亚马逊、eBay、Temu、抖音、速卖通等。
+你的职责是回答客户提出的问题，
+包括如何开店，以及产品营销、
+物流和仓储管理等与电商相关的扩展问题。
+请拒绝回答政治敏感问题。
+请使用 markdown 在聊天中包含可点击的链接
                       """
         )
     ]
@@ -269,18 +290,21 @@ Please Use markdown to include clickable links in the chat
         resp_content = agent_executor.invoke({"messages": chat_history})
         # print(resp_content)
         # return resp_content
+        logger.info(pretty_repr(resp_content))
         if request.stream:
             return StreamingResponse(
                 _resp_async_generator_true(request, resp_content),
                 media_type="application/x-ndjson",
             )
         # logger.info(pformat(resp_content))
-        logger.info(pretty_repr(resp_content))
+        
 
         content = resp_content["messages"][-1].content
         links = find_md_links(content)
         for _key in links:
-            content = content.replace(f'[{_key}]',f'{_key}').replace(f'({links[_key]})','')
+            content = content.replace(f"[{_key}]", f"{_key}").replace(
+                f"({links[_key]})", ""
+            )
 
         return {
             "id": str(time.time()).replace(".", ""),
@@ -293,22 +317,20 @@ Please Use markdown to include clickable links in the chat
             "choices": [
                 {
                     "index": 0,
-                    "message": Message(
-                        role="assistant", content=content
-                    ),
+                    "message": Message(role="assistant", content=content),
                     "logprobs": None,
                     "finish_reason": "stop",
                 }
             ],
             "usage": resp_content["messages"][-1].usage_metadata,
-            "extra_info":{
-                "links":[{'url_title':k,'url_link':v} for (k,v) in links.items()]
+            "extra_info": {
+                "links": [{"url_title": k, "url_link": v} for (k, v) in links.items()]
             },
-            'status_code':200
+            "status_code": 200,
         }
     except Exception as e:
         logger.error(e)
-        return {'status_code':500,'message':str(e)}
+        return {"status_code": 500, "message": str(e)}
 
 
 @app.post("/knowledge/add")
@@ -338,7 +360,7 @@ async def knowledge_add(request: KnowledgeRequest):
 @app.post("/knowledge/get")
 async def knowledge_get(request: KnowledgeGetRequest):
     client = MilvusClient(
-        uri=os.getenv('MILVUS_URL'),
+        uri=os.getenv("MILVUS_URL"),
         token=f"{os.getenv('MILVUS_USER')}:{os.getenv('MILVUS_PASSWORD')}",
         db_name="default",
     )
@@ -356,28 +378,30 @@ async def knowledge_get(request: KnowledgeGetRequest):
         #         "max_iterations": 0,
         #         "team_size": 0,
         #     },
-        search_params={
-            "metric_type": "L2",
-            "params": {"ef": 10}
-        },  # Search parameters
-        output_fields=["pk",'text','$meta'],  # Output fields to return
+        search_params={"metric_type": "L2", "params": {"ef": 10}},  # Search parameters
+        output_fields=["pk", "text", "$meta"],  # Output fields to return
     )
     result = []
     for item in res[0]:
-        result.append({
-            'id':item['id'],
-            'distance':item['distance'],
-            'entity':{
-                'text':item['entity'].pop('text'),
-                'pk':item['entity'].pop('pk'),
-                'metadata':item['entity']
+        result.append(
+            {
+                "id": item["id"],
+                "distance": item["distance"],
+                "entity": {
+                    "text": item["entity"].pop("text"),
+                    "pk": item["entity"].pop("pk"),
+                    "metadata": item["entity"],
+                },
             }
-        })
-
+        )
 
     # result = json.dumps(res, indent=4)
     # print(result)
-    return {'data':result,"status_code": 200,}
+    return {
+        "data": result,
+        "status_code": 200,
+    }
+
 
 @app.post("/knowledge/update")
 async def knowledge_update(request: KnowledgeRequest):
@@ -387,11 +411,6 @@ async def knowledge_update(request: KnowledgeRequest):
     except Exception as e:
         logger.error(str(e))
         return {"status_code": 500, "message": str(e)}
-    
-
-
-
-
 
 
 @app.get("/health")
