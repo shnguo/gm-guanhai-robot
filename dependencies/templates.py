@@ -233,7 +233,7 @@ market_assessment_generate_prompt = PromptTemplate.from_template('''
 原产地中国占比高低的定义规则如下，原产地中国占比低：<30%；原产地中国占比一般：30%<=集中度<60%；原产地中国占比高：>=60%。  
 
 - 市场反馈情况：  
-● 还有，经过商品评论数据的挖掘，有以下反馈的待提升点需要关注：{key_reviews} 等，这些提升质量和服务的诉求在抽样中占比分别是 {quality_reviews_proportion} 和 {service_reviews_proportion}，  
+● 还有，经过商品评论数据的挖掘，有以下反馈的待提升点需要关注：{key_reviews} 等，这些提升质量的诉求在抽样中占比是 {quality_reviews_proportion}，  
 通常超过20%则认为是较高的潜力市场机会来指导商品提升方向。  
 
 - 销售季节性影响情况：  
