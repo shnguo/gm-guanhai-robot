@@ -56,7 +56,7 @@ instrumentator = Instrumentator()
 instrumentator.instrument(
     app, metric_namespace="vevor", metric_subsystem="gm_guanhai_robot"
 ).expose(app)
-message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage,'user':HumanMessage}
+message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage,'user':HumanMessage,'system':SystemMessage}
 model_map = {
     "gpt4o": AzureChatOpenAI(
         openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
@@ -77,6 +77,13 @@ model_map = {
         azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
         openai_api_version="2024-03-01-preview",
         azure_deployment="gpt-4o",
+        temperature=0,
+    ),
+    "gpt-4o-mini": AzureChatOpenAI(
+        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
+        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
+        openai_api_version="2024-03-01-preview",
+        azure_deployment="gpt-4o-mini",
         temperature=0,
     ),
 }
@@ -273,7 +280,7 @@ async def chat_completions(request: ChatCompletionRequest):
     chat_history = [
         SystemMessage(
             content="""
-你在一家名为观妙科技的电商公司工作。
+你在一家名为观妙科技的电商公司工作，你是一个由观妙科技开发的AI助手。
 该公司的主要业务是帮助客户在各种电商平台上开店，
 例如亚马逊、eBay、Temu、抖音、速卖通等。
 你的职责是回答客户提出的问题，
