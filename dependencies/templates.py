@@ -242,7 +242,7 @@ market_assessment_generate_prompt = PromptTemplate.from_template('''
 
 
 注意：以上描述中，部分数据可能有缺失，缺失数据的部分直接忽略，不要杜撰。如果没有优势或劣势，对应的输出可以为空。
-输出形式为json，3个key分别是“优势”、“劣势”、“建议”，对应三个维度的内容。
+输出形式为json，3个key分别是“Advantages”、“Disadvantages”、“Suggestions”，对应优势、劣势和建议三个维度的内容。
 注意输出内容仅有JSON的文本，不要再包含任何标识符，比如反引号或语言标识符（如json）。
 ''')
 
@@ -270,6 +270,6 @@ product_assessment_generate_prompt = PromptTemplate.from_template('''
 
 注意：
 以上描述中，部分数据可能有缺失，缺失数据的部分直接忽略，不要杜撰。如果没有优势或劣势，对应的输出可以为空。
-输出形式为json，3个key分别是“优势”、“劣势”、“建议”，对应三个维度的内容。
+输出形式为json，3个key分别是“Advantages”、“Disadvantages”、“Suggestions”，对应优势、劣势和建议三个维度的内容。
 注意输出内容仅有JSON的文本，不要再包含任何标识符，比如反引号或语言标识符（如json）。                                             
 ''')
