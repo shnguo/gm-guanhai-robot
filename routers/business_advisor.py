@@ -34,9 +34,9 @@ async def market_assessment_generate(ma: MarketAssessment):
 
             result_js = json.loads(result)
             result = {
-                "优势": result_js.get("优势"),
-                "劣势": result_js.get("劣势"),
-                "建议": result_js.get("建议")
+                "Advantages": result_js.get("Advantages"),
+                "Disadvantages": result_js.get("Disadvantages"),
+                "Suggestions": result_js.get("Suggestions")
             }
             result.update(
                 {
@@ -68,9 +68,9 @@ async def product_assessment_generate(pa: ProductAssessment):
 
             result_js = json.loads(result)
             result = {
-                "优势": result_js.get("优势"),
-                "劣势": result_js.get("劣势"),
-                "建议": result_js.get("建议")
+                "Advantages": result_js.get("Advantages"),
+                "Disadvantages": result_js.get("Disadvantages"),
+                "Suggestions": result_js.get("Suggestions")
             }
             result.update(
                 {
