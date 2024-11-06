@@ -173,3 +173,4 @@ aliyun-fc3/sync-clone
 aliyun-fc3/code/python
 env.json
 notebook/vit-test.ipynb
+tool_chat_template_llama3.1_json.jinja

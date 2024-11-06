@@ -1,3 +1,19 @@
+"""
+Copyright 2024 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import os
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +39,7 @@ from fastapi import FastAPI, HTTPException, Request
 from dotenv import load_dotenv, find_dotenv
 from utils.log import get_logger
 from prometheus_fastapi_instrumentator import Instrumentator
-from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings, ChatOpenAI
 from langchain_milvus import Milvus
 from langchain_core.documents import Document
 from langchain.tools.retriever import create_retriever_tool
@@ -56,43 +72,78 @@ instrumentator = Instrumentator()
 instrumentator.instrument(
     app, metric_namespace="vevor", metric_subsystem="gm_guanhai_robot"
 ).expose(app)
-message_map = {"ai": AIMessage, "human": HumanMessage, "assistant": AIMessage,'user':HumanMessage,'system':SystemMessage}
+message_map = {
+    "ai": AIMessage,
+    "human": HumanMessage,
+    "assistant": AIMessage,
+    "user": HumanMessage,
+    "system": SystemMessage,
+}
 model_map = {
     "gpt4o": AzureChatOpenAI(
-        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
-        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
-        openai_api_version="2024-03-01-preview",
+        openai_api_key=os.getenv("GPT4o_API_KEY"),
+        azure_endpoint=os.getenv("GPT4o_ENDPOINT"),
+        openai_api_version="2024-08-01-preview",
         azure_deployment="gpt-4o",
         temperature=0,
     ),
     "gpt4omini": AzureChatOpenAI(
-        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
-        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
-        openai_api_version="2024-03-01-preview",
+        openai_api_key=os.getenv("GPT4omini_API_KEY"),
+        azure_endpoint=os.getenv("GPT4omini_ENDPOINT"),
+        openai_api_version="2024-08-01-preview",
         azure_deployment="gpt-4o-mini",
         temperature=0,
     ),
     "gpt-4o": AzureChatOpenAI(
-        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
-        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
-        openai_api_version="2024-03-01-preview",
+        openai_api_key=os.getenv("GPT4o_API_KEY"),
+        azure_endpoint=os.getenv("GPT4o_ENDPOINT"),
+        openai_api_version="2024-08-01-preview",
         azure_deployment="gpt-4o",
         temperature=0,
     ),
     "gpt-4o-mini": AzureChatOpenAI(
-        openai_api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
-        azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
-        openai_api_version="2024-03-01-preview",
+        openai_api_key=os.getenv("GPT4omini_API_KEY"),
+        azure_endpoint=os.getenv("GPT4omini_ENDPOINT"),
+        openai_api_version="2024-08-01-preview",
         azure_deployment="gpt-4o-mini",
         temperature=0,
+    ),
+    "gpt-4-turbo-128k": AzureChatOpenAI(
+        openai_api_key=os.getenv("GPT4_API_KEY"),
+        azure_endpoint=os.getenv("GPT4_ENDPOINT"),
+        openai_api_version="2024-08-01-preview",
+        azure_deployment="gpt-4-turbo-128k",
+        temperature=0,
+    ),
+    "Llama-3.1-8B-Instruct": ChatOpenAI(
+        model="meta-llama/Llama-3.1-8B-Instruct",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+        api_key="token-abc123",  # if you prefer to pass api key in directly instaed of using env vars
+        base_url="http://106.14.145.207:8000/v1",
+        # organization="...",
+        # other params...
+    ),
+    "mistralai/Ministral-8B-Instruct-2410": ChatOpenAI(
+        model="mistralai/Ministral-8B-Instruct-2410",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+        api_key="token-abc123",  # if you prefer to pass api key in directly instaed of using env vars
+        base_url="http://106.14.145.207:8000/v1",
+        # organization="...",
+        # other params...
     ),
 }
 embeddings = AzureOpenAIEmbeddings(
     model="text-embedding-3-large",
     # dimensions: Optional[int] = None, # Can specify dimensions with new text-embedding-3 models
-    azure_endpoint=os.getenv("VEVORPOC_OPENAI_ENDPOINT"),
-    api_key=os.getenv("VEVORPOC_OPENAI_API_KEY"),
-    openai_api_version="2024-03-01-preview",
+    azure_endpoint=os.getenv("TEXT_EMBEDDING_3_LARGE_ENDPOINT"),
+    api_key=os.getenv("TEXT_EMBEDDING_3_LARGE_API_KEY"),
+    openai_api_version="2023-05-15",
 )
 # vector_store = Milvus(
 #     embedding_function=embeddings,
@@ -257,8 +308,8 @@ async def _resp_async_generator_true(request, resp_content):
         "created": time.time(),
         "model": "gpt-4o",
         "system_fingerprint": resp_content["messages"][-1].response_metadata[
-                "system_fingerprint"
-            ],
+            "system_fingerprint"
+        ],
         "choices": [
             {"index": 0, "delta": {}, "logprobs": None, "finish_reason": "stop"}
         ],
@@ -304,7 +355,6 @@ async def chat_completions(request: ChatCompletionRequest):
                 media_type="application/x-ndjson",
             )
         # logger.info(pformat(resp_content))
-        
 
         content = resp_content["messages"][-1].content
         links = find_md_links(content)

@@ -1,0 +1,15 @@
+FROM --platform=linux/amd64  registry.cn-shanghai.aliyuncs.com/shnguo/pytorch.pytorch:2.4.0-cuda12.4-cudnn9-devel
+RUN apt update \
+    && DEBIAN_FRONTEND=noninteractive apt install -y tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置默认时区
+ENV TZ=Asia/Shanghai
+ENV HF_ENDPOINT=https://hf-mirror.com
+ENV HUGGING_FACE_HUB_TOKEN=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
+WORKDIR /workspace
+
+RUN pip install vllm -i https://pypi.tuna.tsinghua.edu.cn/simple
+# COPY ./.cache/huggingface/models--meta-llama--Llama-3.1-8B-Instruct /root/.cache/huggingface/models--meta-llama--Llama-3.1-8B-Instruct
+
+CMD ["vllm serve meta-llama/Llama-3.1-8B-Instruct  --dtype auto --api-key token-abc123 --trust-remote-code --max-model-len 8192"]

@@ -54,6 +54,10 @@ resources:
         ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${env('ALIBABA_CLOUD_ACCESS_KEY_SECRET')}
         VEVORPOC_OPENAI_API_KEY: ${env('VEVORPOC_OPENAI_API_KEY')}
         VEVORPOC_OPENAI_ENDPOINT: ${env('VEVORPOC_OPENAI_ENDPOINT')}
+        GPT4o_ENDPOINT: ${env('GPT4o_ENDPOINT')}
+        GPT4o_API_KEY: ${env('GPT4o_API_KEY')}
+        GPT4omini_ENDPOINT: ${env('GPT4omini_ENDPOINT')}
+        GPT4omini_API_KEY: ${env('GPT4omini_API_KEY')}
       internetAccess: true
       logConfig:
         enableInstanceMetrics: true
