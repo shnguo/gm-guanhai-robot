@@ -55,8 +55,10 @@ def send_llm_data(data):
         if response.json().get("code") == 200:
             print("大模型调用资费信息落库 - 请求成功:", response.json())
             STATUS_COUNTER.labels("2xx").inc()
+            logger.info(f"大模型调用资费信息落库 - 请求成功:{response.text}")
         else:
             print(f"大模型调用资费信息落库 - 请求失败: 响应内容: {response.text}")
+            logger.error(f"大模型调用资费信息落库 - 请求失败: 响应内容:{response.text}")
 
     except requests.exceptions.RequestException as e:
         print("大模型调用资费信息落库 - 请求出错:", e)
@@ -85,8 +87,10 @@ def send_to_rabbitmq(article_id, rewritten_data):
                                   delivery_mode=2,  # 使消息持久化
                               )
                               )
+        msg = f"Article {article_id} rewritten content sent to RabbitMQ: queue {rb_queue_name} on the host {rb_host_name}"
+        print(msg)
+        logger.info(msg)
 
-        print(f"Article {article_id} rewritten content sent to RabbitMQ: queue {rb_queue_name} on the host {rb_host_name}")
         # 关闭连接
         connection.close()
     except Exception as e:
