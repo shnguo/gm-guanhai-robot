@@ -50,7 +50,7 @@ def send_llm_data(data):
     }
     # 发送 POST 请求
     try:
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data,timeout=5)
         # 检查请求是否成功
         if response.json().get("code") == 200:
             print("大模型调用资费信息落库 - 请求成功:", response.json())
