@@ -67,14 +67,17 @@ def voc_hander(event, context):
         # logger = logging.getLogger()
         request_body = eval(event.decode("utf-8").replace("false", "False"))[0]["body"]
         logger.info(request_body)
+        request_body["asin_list"].append('-1')
         # logger.info(f"ALIBABA_CLOUD_ACCESS_KEY_ID={os.getenv('ALIBABA_CLOUD_ACCESS_KEY_ID')}")
-        sql = """
-        select distinct asin,commentid, content from gmods.s_vevor_crs_crp_bazhuayu_amazon_asin_review_df 
-        where ds=MAX_PT('gmods.s_vevor_crs_crp_bazhuayu_amazon_asin_review_df');
+        sql = f"""
+        select distinct asin,commentid, content from gmods_dev.s_gramtech_cop_crp_bazhuayu_amazon_asin_review_df 
+        where ds=MAX_PT('gmods_dev.s_gramtech_cop_crp_bazhuayu_amazon_asin_review_df') and asin in {tuple(request_body["asin_list"])};
         """
         try:
             df = get_odps_data(sql)
             logger.info(f"df length:{len(df)}")
+            if len(df) == 0:
+                return {"error": f"No data found, asin_list:{request_body['asin_list']}"}
             # return str(df)
         except Exception as e:
             logger.error(e)
@@ -259,7 +262,7 @@ if __name__ == "__main__":
             "body": {
                 "request_id": "123",
                 "category": "product",
-                "asin_list": ["asin1", "asin2", "asin3"],
+                "asin_list": ["B07WLY7J7S"],
                 "voc_history": [
                     {
                         "voc_key": "Product Quality Control",
